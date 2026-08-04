@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Nunito Sans", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-logo: "Baloo 2", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* Foundation Colors */
+  --color-paper-cream: #FFF9F0;
+  --color-warm-white: #FFFCF7;
+  --color-oat: #F4EBDD;
+  --color-soft-sand: #E7DCCB;
+  --color-cocoa: #3D342F;
+  --color-soft-brown: #6F625B;
+  --color-dusty-taupe: #998D85;
+
+  /* Brand Colors */
+  --color-berry: #E45C75;
+  --color-berry-dark: #C94360;
+  --color-sky: #65B9E8;
+  --color-leaf: #79B96B;
+  --color-honey: #F2B84B;
+  --color-grape: #8B72C9;
+  --color-coral: #F28C6F;
+  --color-mint: #A8D8B9;
+
+  /* Soft Tint Surfaces */
+  --color-tint-berry: #FCE8EC;
+  --color-tint-sky: #E7F5FC;
+  --color-tint-leaf: #EAF5E7;
+  --color-tint-honey: #FFF3D6;
+  --color-tint-grape: #F0ECFA;
+  --color-tint-coral: #FDECE7;
+  --color-tint-mint: #E9F6EE;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: #FFF9F0;
+  color: #3D342F;
+}
+
+.font-logo {
+  font-family: var(--font-logo), var(--font-display);
+}
+
+.font-display {
+  font-family: var(--font-display), var(--font-body);
+}
+
+.font-mono {
+  font-family: var(--font-mono), monospace;
+}
+
+/* Custom shadow effects from the spec */
+.shadow-card {
+  box-shadow: 0 1px 2px rgba(61, 52, 47, 0.06), 0 6px 18px rgba(61, 52, 47, 0.08);
+}
+
+.shadow-raised {
+  box-shadow: 0 2px 3px rgba(61, 52, 47, 0.07), 0 10px 24px rgba(61, 52, 47, 0.10);
+}
+
+.shadow-tile {
+  box-shadow: 0 3px 0 rgba(61, 52, 47, 0.14);
+}
+
+.shadow-tile-depressed {
+  box-shadow: 0 1px 0 rgba(61, 52, 47, 0.10);
+  transform: translateY(2px);
+}
+

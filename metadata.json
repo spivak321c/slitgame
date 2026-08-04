@@ -1,0 +1,6 @@
+{
+  "name": "Slotword",
+  "description": "A playful, tactile word puzzle workshop with on-chain verification and friendly duels.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
