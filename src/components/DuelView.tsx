@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShieldCheck, Mail, MailOpen, Lock, Trophy, ArrowLeft, Play, User, Users, Flame, HelpCircle } from 'lucide-react';
 import { ScreenType, Opponent, DuelSession, OPPONENTS, WalletState, calculateLetterStates } from '../types';
+import { sound } from '../utils/audio';
 
 interface DuelViewProps {
   onNavigate: (screen: ScreenType) => void;
@@ -40,6 +41,7 @@ export default function DuelView({
       return;
     }
 
+    sound.playRewardSound();
     // Deduct entry fee
     onDeductBalance(0.01);
 
@@ -78,6 +80,7 @@ export default function DuelView({
   // Move from Setup to Gameplay
   const handleLaunchGameplay = () => {
     if (!session) return;
+    sound.playKeyEnter();
     setSession(prev => prev ? { ...prev, step: 'setup' } : null);
   };
 
@@ -86,17 +89,23 @@ export default function DuelView({
     if (!session || session.step !== 'setup') return;
 
     if (key === 'DELETE' || key === 'BACKSPACE') {
+      sound.playKeyDelete();
       setCurrentGuess(prev => prev.slice(0, -1));
     } else if (key === 'ENTER') {
       if (currentGuess.length < 5) {
+        sound.playShakeSound();
         setShakeRow(session.playerGuesses.length);
         setTimeout(() => setShakeRow(null), 250);
         return;
       }
 
+      sound.playKeyEnter();
       const guessUpper = currentGuess.toUpperCase();
       const updatedGuesses = [...session.playerGuesses, guessUpper];
       
+      const states = calculateLetterStates(guessUpper, session.word);
+      states.forEach((st, idx) => sound.playTileReveal(idx * 0.1, st));
+
       // Simulate opponent progress at the same time!
       const botGuesses = [...session.opponentGuesses];
       // Simulated owl / fox guesses after player inputs a guess
@@ -108,8 +117,10 @@ export default function DuelView({
       let playerStatus = session.playerStatus;
       if (guessUpper === session.word) {
         playerStatus = 'won';
+        setTimeout(() => sound.playWinSound(), 400);
       } else if (updatedGuesses.length >= 6) {
         playerStatus = 'lost';
+        setTimeout(() => sound.playLoseSound(), 400);
       }
 
       setSession(prev => {
@@ -138,6 +149,7 @@ export default function DuelView({
       }
     } else if (/^[A-Z]$/i.test(key)) {
       if (currentGuess.length < 5) {
+        sound.playKeyPress();
         setCurrentGuess(prev => (prev + key).toUpperCase());
       }
     }

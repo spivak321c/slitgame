@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { HelpCircle, RefreshCw, Flame, ArrowLeft, CheckCircle, ShieldAlert, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { ScreenType, WalletState, calculateLetterStates } from '../types';
+import { sound } from '../utils/audio';
 
 interface DailyPuzzleViewProps {
   onNavigate: (screen: ScreenType) => void;
@@ -99,32 +100,50 @@ export default function DailyPuzzleView({
     if (gameStatus !== 'playing') return;
 
     if (key === 'DELETE') {
+      sound.playKeyDelete();
       setCurrentGuess(prev => prev.slice(0, -1));
     } else if (key === 'ENTER') {
       if (currentGuess.length < 5) {
+        sound.playShakeSound();
         // Shake row
         setShakeRow(guesses.length);
         setTimeout(() => setShakeRow(null), 250);
         return;
       }
       
-      const newGuesses = [...guesses, currentGuess.toUpperCase()];
+      sound.playKeyEnter();
+      const submitted = currentGuess.toUpperCase();
+      const newGuesses = [...guesses, submitted];
       setGuesses(newGuesses);
       
-      // Check Win / Lose
-      if (currentGuess.toUpperCase() === word) {
-        setGameStatus('won');
-        if (isDaily) {
-          setDailySolved(true);
+      // Calculate letter status for flip audio & animations
+      const states = calculateLetterStates(submitted, word);
+      states.forEach((st, idx) => {
+        sound.playTileReveal(idx * 0.12, st);
+      });
+
+      // Check Win / Lose after tile flip sequence
+      const isWin = submitted === word;
+      const isLoss = newGuesses.length >= 6 && !isWin;
+
+      setTimeout(() => {
+        if (isWin) {
+          sound.playWinSound();
+          setGameStatus('won');
+          if (isDaily) {
+            setDailySolved(true);
+          }
+          onSolve(newGuesses.length);
+        } else if (isLoss) {
+          sound.playLoseSound();
+          setGameStatus('lost');
         }
-        onSolve(newGuesses.length);
-      } else if (newGuesses.length >= 6) {
-        setGameStatus('lost');
-      }
-      
+      }, 500);
+
       setCurrentGuess('');
     } else if (/^[A-Z]$/i.test(key)) {
       if (currentGuess.length < 5) {
+        sound.playKeyPress();
         setCurrentGuess(prev => (prev + key).toUpperCase());
       }
     }
@@ -287,22 +306,32 @@ export default function DailyPuzzleView({
                       key={colIndex}
                       id={`tile-${rowIndex}-${colIndex}`}
                       className={`w-12 h-12 md:w-13 md:h-13 rounded-xl border-2 ${cellBg} ${cellBorder} ${cellText} flex flex-col items-center justify-center font-logo font-bold text-xl select-none relative shadow-sm`}
-                      initial={{ scale: 1 }}
+                      initial={{ scale: 1, rotateX: 0 }}
                       animate={
-                        letter && isCurrentRow
-                          ? { scale: [0.94, 1.06, 1], rotate: [0, 1, 0] }
+                        flip
+                          ? { rotateX: [0, 90, 0], scale: [1, 1.08, 1] }
+                          : letter && isCurrentRow
+                          ? { scale: [0.92, 1.12, 1], rotate: [0, 2, 0] }
                           : {}
                       }
-                      transition={{
-                        duration: 0.16,
-                        ease: [0.34, 1.56, 0.64, 1],
-                      }}
+                      transition={
+                        flip
+                          ? {
+                              duration: 0.35,
+                              delay: colIndex * 0.12,
+                              ease: 'easeInOut',
+                            }
+                          : {
+                              duration: 0.14,
+                              ease: [0.34, 1.56, 0.64, 1],
+                            }
+                      }
                     >
                       <span>{letter}</span>
                       
                       {/* Optional Accessibility Symbols (Section 5) */}
                       {symbol && (
-                        <span className="absolute bottom-1 right-1.5 text-[7px] opacity-75 font-mono">
+                        <span className="absolute bottom-1 right-1.5 text-[7px] opacity-75 font-mono font-bold">
                           {symbol}
                         </span>
                       )}

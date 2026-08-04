@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { Award, ArrowLeft, Star } from 'lucide-react';
 import { ScreenType, Achievement } from '../types';
+import { sound } from '../utils/audio';
 
 interface AchievementsViewProps {
   onNavigate: (screen: ScreenType) => void;
@@ -8,14 +9,25 @@ interface AchievementsViewProps {
 }
 
 export default function AchievementsView({ onNavigate, achievements }: AchievementsViewProps) {
+  const handleBadgeClick = (unlocked: boolean) => {
+    if (unlocked) {
+      sound.playRewardSound();
+    } else {
+      sound.playShakeSound();
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       
       {/* Top Navigation */}
       <div className="flex items-center justify-between mb-6 pb-3 border-b border-[#E7DCCB]">
         <button
-          onClick={() => onNavigate('dashboard')}
-          className="flex items-center gap-1.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors"
+          onClick={() => {
+            sound.playKeyPress();
+            onNavigate('dashboard');
+          }}
+          className="flex items-center gap-1.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           Dashboard
@@ -38,7 +50,8 @@ export default function AchievementsView({ onNavigate, achievements }: Achieveme
         {achievements.map((badge, idx) => (
           <motion.div
             key={badge.id}
-            className={`border-2 rounded-3xl p-5 shadow-card flex flex-col items-center text-center relative overflow-hidden transition-all ${
+            onClick={() => handleBadgeClick(badge.unlocked)}
+            className={`border-2 rounded-3xl p-5 shadow-card flex flex-col items-center text-center relative overflow-hidden transition-all cursor-pointer ${
               badge.unlocked
                 ? 'bg-[#FFFCF7] border-[#8B72C9] hover:shadow-raised'
                 : 'bg-[#F4EBDD]/50 border-[#E7DCCB] opacity-70'
@@ -47,6 +60,7 @@ export default function AchievementsView({ onNavigate, achievements }: Achieveme
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: idx * 0.08 }}
             whileHover={badge.unlocked ? { y: -4, rotate: idx % 2 === 0 ? 1 : -1 } : {}}
+            whileTap={{ scale: 0.96 }}
           >
             {/* Visual Icon Badge (Collectible Sticker style) */}
             <div

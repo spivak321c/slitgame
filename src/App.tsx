@@ -13,10 +13,13 @@ import {
   Compass,
   Star,
   Sparkles,
-  Zap
+  Zap,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 import { ScreenType, WalletState, Achievement, INITIAL_ACHIEVEMENTS } from './types';
+import { sound } from './utils/audio';
 import LandingPage from './components/LandingPage';
 import DashboardView from './components/DashboardView';
 import DailyPuzzleView from './components/DailyPuzzleView';
@@ -48,6 +51,15 @@ export default function App() {
   // Sticker achievement stamps
   const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
 
+  // Audio mute/unmute state
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  const toggleAudio = () => {
+    const nextState = sound.toggleSound();
+    setSoundEnabled(nextState);
+    if (nextState) sound.playKeyPress();
+  };
+
   // Floating celebration elements
   const [celebrationStars, setCelebrationStars] = useState<Array<{ id: number; x: number; y: number }>>([]);
 
@@ -69,6 +81,7 @@ export default function App() {
       connected: true,
       balance: Math.max(prev.balance, 0.05),
     }));
+    sound.playRewardSound();
     triggerCelebration();
   };
 
@@ -79,6 +92,7 @@ export default function App() {
       { desc: 'Top up (Faucet SOL)', amount: '+0.02000 SOL', type: 'plus', time: 'Just now' },
       ...prev,
     ]);
+    sound.playRewardSound();
     triggerCelebration();
   };
 
@@ -98,6 +112,7 @@ export default function App() {
       { desc: 'Match Duel Prize payout', amount: `+${amount.toFixed(5)} SOL`, type: 'plus', time: 'Just now' },
       ...prev,
     ]);
+    sound.playRewardSound();
     triggerCelebration();
   };
 
@@ -249,11 +264,28 @@ export default function App() {
 
             {/* Hand-crafted Unified User Status Pill */}
             <div className="flex items-center bg-[#FAF4EA] border border-[#EADFCB] rounded-full p-1 shadow-[0_2px_12px_-4px_rgba(61,52,47,0.06)]">
+              {/* Sound Effects Toggle Button */}
+              <motion.button
+                onClick={toggleAudio}
+                whileTap={{ scale: 0.9 }}
+                className="p-1.5 rounded-full hover:bg-white/80 text-[#6F625B] hover:text-[#3D342F] transition-colors cursor-pointer"
+                title={soundEnabled ? 'Mute Sound Effects' : 'Unmute Sound Effects'}
+              >
+                {soundEnabled ? (
+                  <Volume2 className="w-3.5 h-3.5 text-[#428033]" />
+                ) : (
+                  <VolumeX className="w-3.5 h-3.5 text-[#A69485]" />
+                )}
+              </motion.button>
+
+              {/* Precise vertical separator line */}
+              <div className="w-[1px] h-4 bg-[#EADFCB] mx-0.5" />
+
               {/* Daily Streak Pouch Section */}
               <motion.div
                 onClick={() => setCurrentScreen('achievements')}
                 whileTap={{ scale: 0.96 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-[#FFF2EE] text-[#3D342F] transition-all cursor-pointer group/streak"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full hover:bg-[#FFF2EE] text-[#3D342F] transition-all cursor-pointer group/streak"
                 title="Your active puzzle streak"
               >
                 <Flame className="w-3.5 h-3.5 text-[#F28C6F] transition-transform group-hover/streak:scale-110" />
