@@ -93,11 +93,11 @@ export default function LandingPage({ onNavigate, onConnectWallet, walletConnect
         <div className="absolute bottom-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#E3D4BC]" />
         <div className="absolute bottom-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-[#E3D4BC]" />
 
-        <div className="flex gap-1.5 md:gap-3 justify-center flex-wrap">
+        <div className="flex gap-1 sm:gap-2 md:gap-3 justify-center flex-wrap">
           {titleLetters.map((item, idx) => (
             <motion.div
               key={idx}
-              className={`w-11 h-11 md:w-16 md:h-16 ${item.bg} ${item.text} rounded-xl md:rounded-2xl shadow-[0_4px_0_#C5B59E,0_8px_16px_rgba(61,52,47,0.12)] font-logo font-extrabold text-xl md:text-3.5xl flex items-center justify-center select-none border-b-2 border-black/10`}
+              className={`w-9 h-9 sm:w-12 sm:h-12 md:w-16 md:h-16 ${item.bg} ${item.text} rounded-lg sm:rounded-xl md:rounded-2xl shadow-[0_3px_0_#C5B59E,0_6px_14px_rgba(61,52,47,0.1)] font-logo font-extrabold text-base sm:text-2xl md:text-3.5xl flex items-center justify-center select-none border-b-2 border-black/10`}
               initial={{ scale: 0.8, y: 15, rotate: item.rot }}
               animate={{ scale: 1, y: 0, rotate: item.rot }}
               transition={{

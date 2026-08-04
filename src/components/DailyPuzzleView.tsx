@@ -305,7 +305,7 @@ export default function DailyPuzzleView({
                     <motion.div
                       key={colIndex}
                       id={`tile-${rowIndex}-${colIndex}`}
-                      className={`w-12 h-12 md:w-13 md:h-13 rounded-xl border-2 ${cellBg} ${cellBorder} ${cellText} flex flex-col items-center justify-center font-logo font-bold text-xl select-none relative shadow-sm`}
+                      className={`w-11 h-11 xs:w-12 xs:h-12 sm:w-13 sm:h-13 rounded-xl border-2 ${cellBg} ${cellBorder} ${cellText} flex flex-col items-center justify-center font-logo font-bold text-lg sm:text-xl select-none relative shadow-sm`}
                       initial={{ scale: 1, rotateX: 0 }}
                       animate={
                         flip
@@ -331,7 +331,7 @@ export default function DailyPuzzleView({
                       
                       {/* Optional Accessibility Symbols (Section 5) */}
                       {symbol && (
-                        <span className="absolute bottom-1 right-1.5 text-[7px] opacity-75 font-mono font-bold">
+                        <span className="absolute bottom-0.5 right-1 text-[7px] opacity-75 font-mono font-bold">
                           {symbol}
                         </span>
                       )}
@@ -373,7 +373,7 @@ export default function DailyPuzzleView({
                 {!txSaved ? (
                   <button
                     onClick={() => setShowSaveTx(true)}
-                    className="w-full py-3 bg-[#E45C75] hover:bg-[#C94360] text-white font-display font-bold text-sm rounded-xl shadow-raised transition-all"
+                    className="w-full py-3 bg-[#E45C75] hover:bg-[#C94360] text-white font-display font-bold text-sm rounded-xl shadow-raised transition-all cursor-pointer"
                   >
                     Save Verified Result
                   </button>
@@ -387,7 +387,7 @@ export default function DailyPuzzleView({
             ) : (
               <button
                 onClick={handleRestartPractice}
-                className="w-full py-3 bg-[#65B9E8] hover:bg-[#4BA8DC] text-white font-display font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-1.5"
+                className="w-full py-3 bg-[#65B9E8] hover:bg-[#4BA8DC] text-white font-display font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" />
                 Play Another Practice Word
@@ -397,15 +397,15 @@ export default function DailyPuzzleView({
         )}
       </AnimatePresence>
 
-      {/* Tactile Virtual Keyboard */}
-      <div className="w-full max-w-lg mx-auto mb-2 select-none">
+      {/* Tactile Virtual Keyboard (Mobile-optimized touch key sizes & fluid flex layout) */}
+      <div className="w-full max-w-lg mx-auto mb-2 px-1 select-none">
         {keyboardRows.map((row, rowIdx) => (
-          <div key={rowIdx} className="flex justify-center gap-1 md:gap-1.5 my-1">
+          <div key={rowIdx} className="flex justify-center gap-1 sm:gap-1.5 my-1">
             {row.map(key => {
               const letterStatus = getLetterStatus(key);
               
               // Styles
-              let keyBg = 'bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F]';
+              let keyBg = 'bg-[#F4EBDD] active:bg-[#E7DCCB] hover:bg-[#E7DCCB] text-[#3D342F]';
               if (letterStatus === 'correct') {
                 keyBg = 'bg-[#79B96B] text-white';
               } else if (letterStatus === 'present') {
@@ -420,7 +420,11 @@ export default function DailyPuzzleView({
                 <button
                   key={key}
                   onClick={() => handleKeyPress(key)}
-                  className={`${isWide ? 'px-2 md:px-3 text-xs' : 'w-8 h-11 md:w-9 md:h-12 text-sm'} font-logo font-bold rounded-lg ${keyBg} transition-colors flex items-center justify-center shadow-sm cursor-pointer`}
+                  className={`${
+                    isWide
+                      ? 'px-2 sm:px-3 h-11 sm:h-12 text-[10px] sm:text-xs shrink-0'
+                      : 'flex-1 min-w-0 h-11 sm:h-12 text-xs sm:text-sm md:text-base'
+                  } font-logo font-extrabold rounded-lg ${keyBg} transition-all active:scale-95 flex items-center justify-center shadow-xs cursor-pointer touch-manipulation`}
                 >
                   {key === 'DELETE' ? '⌫' : key}
                 </button>

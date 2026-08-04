@@ -484,40 +484,30 @@ export default function DuelView({
                 })}
               </div>
 
-              {/* Tactile Soft Keyboard */}
-              <div className="w-full max-w-md mx-auto">
-                {['QWERTYUIOP', 'ASDFGHJKL', 'ENTERZXCVBNM⌫'].map((row, idx) => (
-                  <div key={idx} className="flex justify-center gap-1 my-1">
-                    {row.split('').map(char => {
-                      if (char === 'E' && row.includes('ENTER')) return null;
-                      if (char === 'N' && row.includes('ENTER')) return null;
-                      if (char === 'T' && row.includes('ENTER')) return null;
-                      if (char === 'R' && row.includes('ENTER')) return null;
-                      
-                      let displayKey = char;
-                      let actionKey = char;
-                      if (char === '⌫') {
-                        actionKey = 'DELETE';
-                      }
-
+              {/* Tactile Soft Keyboard (Mobile-optimized flex layout) */}
+              <div className="w-full max-w-md mx-auto px-1">
+                {[
+                  ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+                  ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+                  ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'DELETE']
+                ].map((row, rIdx) => (
+                  <div key={rIdx} className="flex justify-center gap-1 sm:gap-1.5 my-1">
+                    {row.map(key => {
+                      const isWide = key === 'ENTER' || key === 'DELETE';
                       return (
                         <button
-                          key={char}
-                          onClick={() => handleDuelKeyPress(actionKey)}
-                          className="px-2.5 py-3 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] font-logo font-bold text-sm text-[#3D342F] shadow-sm cursor-pointer"
+                          key={key}
+                          onClick={() => handleDuelKeyPress(key)}
+                          className={`${
+                            isWide
+                              ? 'px-2 sm:px-3 h-11 sm:h-12 text-[10px] sm:text-xs shrink-0 font-extrabold'
+                              : 'flex-1 min-w-0 h-11 sm:h-12 text-xs sm:text-sm md:text-base font-bold'
+                          } font-logo rounded-lg bg-[#F4EBDD] active:bg-[#E7DCCB] hover:bg-[#E7DCCB] text-[#3D342F] shadow-xs cursor-pointer active:scale-95 transition-all touch-manipulation flex items-center justify-center`}
                         >
-                          {displayKey}
+                          {key === 'DELETE' ? '⌫' : key}
                         </button>
                       );
                     })}
-                    {idx === 2 && (
-                      <button
-                        onClick={() => handleDuelKeyPress('ENTER')}
-                        className="px-3.5 py-3 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] font-logo font-bold text-xs text-[#3D342F] shadow-sm cursor-pointer"
-                      >
-                        ENTER
-                      </button>
-                    )}
                   </div>
                 ))}
               </div>
