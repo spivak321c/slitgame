@@ -39,16 +39,12 @@ export default function VerificationCenterView({ onNavigate, onUnlockAchievement
       </div>
 
       {/* Main Friendly Banner */}
-      <div className="bg-[#E9F6EE] border-2 border-[#A8D8B9] rounded-3xl p-6 text-center mb-8 shadow-sm">
-        <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-[#A8D8B9] shadow-sm select-none">
-          🛡️
-        </div>
-        
-        <h2 className="text-2xl font-logo font-extrabold text-[#3D342F] mb-2">
-          Yesterday’s word was verified ✓
+      <div className="bg-[#E9F6EE] border border-[#A8D8B9] rounded-2xl p-6 text-center mb-8 shadow-sm">
+        <h2 className="text-2xl font-logo font-extrabold text-[#2D5A38] mb-2 flex items-center justify-center gap-2">
+          <span>🛡️</span> Yesterday's Word Verified
         </h2>
         
-        <p className="text-sm text-[#3D342F] max-w-md mx-auto leading-relaxed">
+        <p className="text-sm text-[#2D5A38] max-w-md mx-auto leading-relaxed font-display">
           The published word matches the secret word that was locked before anyone played. This prevents organizers from altering word lists mid-day.
         </p>
       </div>

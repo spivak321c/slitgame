@@ -15,7 +15,7 @@ export default function DashboardView({ onNavigate, streak, dailySolved, achieve
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 md:py-8">
-      {/* Friendly Top Welcome (CSS selector 7) */}
+      {/* Friendly Top Welcome */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-logo font-extrabold text-[#3D342F] tracking-tight">
@@ -25,44 +25,24 @@ export default function DashboardView({ onNavigate, streak, dailySolved, achieve
             Your puzzle workshop is open and warm. Ready for today's words?
           </p>
         </div>
-        
-        {/* Verification Status Banner (CSS selector 1) */}
-        <motion.button
-          onClick={() => onNavigate('verify')}
-          whileTap={{ scale: 0.96 }}
-          className="flex items-center gap-2 px-4 py-2 bg-[#E9F6EE] hover:bg-[#D8F0E1] border border-[#A8D8B9] rounded-2xl text-xs text-[#2D5A38] font-display font-bold shadow-[0_2px_8px_-2px_rgba(121,185,107,0.15)] transition-all cursor-pointer"
-        >
-          <ShieldCheck className="w-4 h-4 text-[#5AA04B]" />
-          <span>Yesterday's word was verified ✓</span>
-        </motion.button>
       </div>
 
       {/* Grid of Activity Home */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8">
         
-        {/* 1. Today's Secret Word Card (CSS selector 2) */}
+        {/* 1. Today's Secret Word Card */}
         <motion.div
           className="col-span-1 md:col-span-7 bg-[#FFFCF7] border border-[#E9DCC6] hover:border-[#DFCDB3] rounded-[28px] p-6 sm:p-7 shadow-[0_4px_20px_-4px_rgba(61,52,47,0.04)] hover:shadow-[0_8px_30px_-6px_rgba(61,52,47,0.08)] transition-all duration-200 flex flex-col justify-between"
           whileHover={{ y: -2 }}
         >
           <div>
-            <div className="flex justify-between items-start mb-4">
-              <span className="px-3 py-1 bg-[#FFF2D6] border border-[#FAD88F]/60 text-[#D98E04] rounded-full text-[11px] font-display font-extrabold uppercase tracking-wider">
-                {dailySolved ? 'Completed' : 'Today’s Puzzle'}
-              </span>
-              <span className="text-xs text-[#A69485] font-mono font-medium flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#79B96B]" />
-                Today: Locked ✓
-              </span>
-            </div>
-
             <h2 className="text-2xl font-logo font-extrabold text-[#3D342F] mb-2.5 leading-snug">
-              {dailySolved ? "You solved today's puzzle!" : "The daily hidden word is sealed."}
+              {dailySolved ? "Today's Puzzle Completed" : "Today's Secret Word Challenge"}
             </h2>
             <p className="text-sm text-[#6F625B] leading-relaxed mb-6 font-display">
               {dailySolved
-                ? "Excellent job wordsmith. You secured today's record and preserved your streak on the blockchain database. Come back tomorrow or challenge a friend in Duels!"
-                : "A brand new five-letter puzzle is locked on-chain. Guess the hidden word in 6 attempts. Every guess reveals tactile hints to guide you."}
+                ? "Excellent job! You secured today's record and preserved your streak. Review your solve or challenge a friend in Duels!"
+                : "A brand new 5-letter puzzle is locked and ready. Guess the hidden word in 6 attempts with tactile feedback."}
             </p>
           </div>
 
@@ -75,17 +55,17 @@ export default function DashboardView({ onNavigate, streak, dailySolved, achieve
                 className="px-6 py-3 bg-[#EAF5E7] hover:bg-[#D4EFCF] text-[#428033] font-display font-bold text-sm rounded-2xl transition-colors flex items-center justify-center gap-2 border border-[#79B96B]/50 cursor-pointer"
               >
                 <CheckCircle className="w-4 h-4 text-[#5AA04B]" />
-                Review Your Solve
+                Review Solve
               </motion.button>
             ) : (
               <motion.button
                 id="start-daily-btn"
                 onClick={() => onNavigate('daily')}
                 whileTap={{ scale: 0.96 }}
-                className="px-6 py-3.5 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-sm rounded-2xl shadow-[0_3px_0_#AF324B,0_8px_16px_-4px_rgba(228,92,117,0.3)] hover:shadow-[0_4px_0_#AF324B,0_12px_20px_-4px_rgba(228,92,117,0.35)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="px-6 py-3.5 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-sm rounded-2xl shadow-[0_3px_0_#AF324B,0_8px_16px_-4px_rgba(228,92,117,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Play className="w-4 h-4 fill-white" />
-                Start Puzzle Solve
+                Play Today's Word
               </motion.button>
             )}
             

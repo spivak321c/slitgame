@@ -87,12 +87,6 @@ export default function LandingPage({ onNavigate, onConnectWallet, walletConnect
         variants={itemVariants}
         className="relative mb-8 md:mb-10 p-4 md:p-6 bg-[#FAF4EA] border border-[#E9DCC6] rounded-3xl shadow-[inset_0_2px_8px_rgba(61,52,47,0.04)] flex items-center justify-center max-w-full"
       >
-        {/* Subtle physical wood rivet/corners detail */}
-        <div className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#E3D4BC]" />
-        <div className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-[#E3D4BC]" />
-        <div className="absolute bottom-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-[#E3D4BC]" />
-        <div className="absolute bottom-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-[#E3D4BC]" />
-
         <div className="flex gap-1 sm:gap-2 md:gap-3 justify-center flex-wrap">
           {titleLetters.map((item, idx) => (
             <motion.div
@@ -119,16 +113,8 @@ export default function LandingPage({ onNavigate, onConnectWallet, walletConnect
         </div>
       </motion.div>
 
-      {/* 2. Hero Headline Block with Micro-Status Badge */}
+      {/* 2. Hero Headline Block */}
       <div className="text-center max-w-xl mb-10 flex flex-col items-center">
-        <motion.div
-          variants={itemVariants}
-          className="flex items-center gap-1.5 px-3 py-1 bg-[#FDF1EE] border border-[#FADCD5] text-[#F28C6F] rounded-full text-[10px] font-display font-extrabold uppercase tracking-wider mb-4 shadow-sm"
-        >
-          <Sparkles className="w-3 h-3 animate-pulse" />
-          <span>Active Challenge Live</span>
-        </motion.div>
-
         <motion.h1
           variants={itemVariants}
           className="text-4.5xl md:text-5xl font-logo font-extrabold tracking-tight text-[#3D342F] leading-tight mb-4"
@@ -188,13 +174,9 @@ export default function LandingPage({ onNavigate, onConnectWallet, walletConnect
         
         {/* Playgrounds Header */}
         <div className="flex flex-col items-center mb-8 text-center">
-          <span className="text-[10px] font-display font-black text-[#A69485] tracking-[0.25em] uppercase mb-1.5">
-            Select Your Workspace
-          </span>
-          <h2 className="text-xl font-logo font-black text-[#4E433C]">
+          <h2 className="text-2xl font-logo font-black text-[#4E433C]">
             Game Modes
           </h2>
-          <div className="w-10 h-0.5 bg-[#EADBCC] mt-2 rounded-full" />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

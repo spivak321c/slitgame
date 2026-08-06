@@ -393,12 +393,12 @@ export default function DuelView({
               </div>
             </div>
 
-            {/* Versus State (Coral Accent) */}
+            {/* Versus State */}
             <div className="md:col-span-3 text-center py-2 md:py-0">
-              <span className="px-4 py-1.5 bg-[#FDECE7] text-[#F28C6F] font-logo font-bold rounded-full text-sm uppercase tracking-wider shadow-sm select-none">
+              <span className="px-4 py-1.5 bg-[#FDECE7] text-[#F28C6F] font-logo font-bold rounded-full text-sm uppercase tracking-wider select-none">
                 VS
               </span>
-              <p className="text-[10px] text-[#6F625B] mt-2">Protected until ends</p>
+              <p className="text-[10px] text-[#6F625B] mt-2 font-display font-medium">Fairness Protected</p>
             </div>
 
             {/* Opponent Card */}

@@ -46,27 +46,27 @@ export default function AchievementsView({ onNavigate, achievements }: Achieveme
       </div>
 
       {/* Grid of badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
         {achievements.map((badge, idx) => (
           <motion.div
             key={badge.id}
             onClick={() => handleBadgeClick(badge.unlocked)}
-            className={`border-2 rounded-3xl p-5 shadow-card flex flex-col items-center text-center relative overflow-hidden transition-all cursor-pointer ${
+            className={`border rounded-2xl p-5 shadow-card flex flex-col items-center text-center relative overflow-hidden transition-all cursor-pointer ${
               badge.unlocked
-                ? 'bg-[#FFFCF7] border-[#8B72C9] hover:shadow-raised'
-                : 'bg-[#F4EBDD]/50 border-[#E7DCCB] opacity-70'
+                ? 'bg-[#FFFCF7] border-[#8B72C9]'
+                : 'bg-[#F4EBDD]/40 border-[#E7DCCB] opacity-75'
             }`}
-            initial={{ opacity: 0, scale: 0.95, rotate: idx % 2 === 0 ? -1 : 1 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: idx * 0.08 }}
-            whileHover={badge.unlocked ? { y: -4, rotate: idx % 2 === 0 ? 1 : -1 } : {}}
-            whileTap={{ scale: 0.96 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            whileHover={badge.unlocked ? { y: -2 } : {}}
+            whileTap={{ scale: 0.98 }}
           >
-            {/* Visual Icon Badge (Collectible Sticker style) */}
+            {/* Stamp Icon */}
             <div
-              className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl mb-4 shadow-sm border select-none transition-transform duration-150 ${
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-3 shadow-xs border select-none transition-transform duration-150 ${
                 badge.unlocked
-                  ? 'bg-[#F0ECFA] border-[#8B72C9] rotate-[-4deg]'
+                  ? 'bg-[#F0ECFA] border-[#8B72C9]'
                   : 'bg-white border-[#E7DCCB]'
               }`}
             >

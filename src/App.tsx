@@ -16,7 +16,10 @@ import {
   Zap,
   Volume2,
   VolumeX,
-  Calendar
+  Calendar,
+  HelpCircle,
+  LogOut,
+  Unplug
 } from 'lucide-react';
 
 import { ScreenType, WalletState, Achievement, INITIAL_ACHIEVEMENTS } from './types';
@@ -28,9 +31,11 @@ import DuelView from './components/DuelView';
 import LeaderboardView from './components/LeaderboardView';
 import VerificationCenterView from './components/VerificationCenterView';
 import AchievementsView from './components/AchievementsView';
+import HowToPlayModal from './components/HowToPlayModal';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('landing');
+  const [howToPlayOpen, setHowToPlayOpen] = useState(false);
   
   // Wallet state (highly interactive simulated card pouch)
   const [wallet, setWallet] = useState<WalletState>({
@@ -84,6 +89,16 @@ export default function App() {
     }));
     sound.playRewardSound();
     triggerCelebration();
+  };
+
+  // Disconnect simulated wallet
+  const handleDisconnectWallet = () => {
+    setWallet(prev => ({
+      ...prev,
+      connected: false,
+    }));
+    setWalletDrawerOpen(false);
+    sound.playKeyPress();
   };
 
   // Add simulated funds
@@ -263,8 +278,26 @@ export default function App() {
               </motion.button>
             )}
 
-            {/* Hand-crafted Unified User Status Pill */}
-            <div className="flex items-center bg-[#FAF4EA] border border-[#EADFCB] rounded-full p-0.5 sm:p-1 shadow-[0_2px_12px_-4px_rgba(61,52,47,0.06)]">
+            {/* Hand-crafted Unified User Status Pill - Fully Responsive */}
+            <div className="flex items-center bg-[#FAF4EA] border border-[#EADFCB] rounded-full p-0.5 sm:p-1 shadow-[0_2px_12px_-4px_rgba(61,52,47,0.06)] max-w-full overflow-x-auto no-scrollbar shrink-0">
+              {/* How to Play Help Widget Trigger */}
+              <motion.button
+                onClick={() => {
+                  sound.playKeyPress();
+                  setHowToPlayOpen(true);
+                }}
+                whileTap={{ scale: 0.9 }}
+                className="p-1 sm:p-1.5 rounded-full hover:bg-white/80 text-[#3D342F] transition-colors cursor-pointer flex items-center gap-1 px-1.5 sm:px-2 shrink-0"
+                title="How to Play Guide for Solvers"
+                aria-label="How to Play Guide"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-[#65B9E8] shrink-0" />
+                <span className="hidden md:inline font-display font-bold text-[11px] text-[#4E433C] whitespace-nowrap">How to Play</span>
+              </motion.button>
+
+              {/* Precise vertical separator line */}
+              <div className="w-[1px] h-3.5 sm:h-4 bg-[#EADFCB] mx-0.5" />
+
               {/* Sound Effects Toggle Button */}
               <motion.button
                 onClick={toggleAudio}
@@ -485,7 +518,7 @@ export default function App() {
       {/* 5. FOOTER CREDITS */}
       <footer className="py-8 border-t border-[#E7DCCB]/60 text-center text-xs text-[#998D85] font-display">
         <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p>© 2026 Slotword Workshop. All results pre-committed and verified on the Solana database.</p>
+          <p>© 2026 Slotword Workshop. All puzzle results pre-committed with cryptographic proof.</p>
           <div className="flex gap-4">
             <button onClick={() => setCurrentScreen('verify')} className="hover:text-[#3D342F] transition-colors">
               Verification Engine
@@ -510,59 +543,60 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 24, stiffness: 220 }}
-              className="relative w-full max-w-sm bg-[#FFFCF7] border-l-2 border-[#E7DCCB] h-full shadow-raised p-6 flex flex-col justify-between"
+              className="relative w-full sm:max-w-sm bg-[#FFFCF7] border-l border-[#E7DCCB] h-full shadow-raised p-4 sm:p-6 flex flex-col justify-between overflow-y-auto"
             >
-              <div>
+              <div className="flex flex-col flex-1 min-h-0">
                 {/* Header of Drawer */}
-                <div className="flex justify-between items-center pb-4 border-b border-[#E7DCCB] mb-6">
+                <div className="flex justify-between items-center pb-3 sm:pb-4 border-b border-[#E7DCCB] mb-4 sm:mb-6 shrink-0">
                   <div className="flex items-center gap-2 text-[#6F625B]">
-                    <Wallet className="w-5 h-5 text-[#E7DCCB]" />
-                    <span className="font-logo font-extrabold text-[#3D342F]">Your Card Pouch</span>
+                    <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-[#E7DCCB]" />
+                    <span className="font-logo font-extrabold text-[#3D342F] text-base sm:text-lg">Your Card Pouch</span>
                   </div>
                   <motion.button
                     onClick={() => setWalletDrawerOpen(false)}
                     whileTap={{ scale: 0.96 }}
-                    className="p-1.5 bg-[#F4EBDD] hover:bg-[#E7DCCB] rounded-lg text-[#3D342F] transition-colors cursor-pointer"
+                    className="p-1.5 bg-[#F4EBDD] hover:bg-[#E7DCCB] rounded-lg text-[#3D342F] transition-colors cursor-pointer shrink-0"
+                    aria-label="Close card pouch"
                   >
                     <X className="w-4 h-4" />
                   </motion.button>
                 </div>
 
                 {/* Simulated Pouch Card Layout */}
-                <div className="bg-[#F4EBDD] border-2 border-[#E7DCCB] rounded-3xl p-5 mb-6 text-left relative overflow-hidden shadow-sm">
+                <div className="bg-[#F4EBDD] border border-[#E7DCCB] rounded-2xl sm:rounded-3xl p-4 sm:p-5 mb-4 sm:mb-6 text-left relative overflow-hidden shadow-xs shrink-0">
                   {/* Faint pattern inside card */}
-                  <div className="absolute right-[-20px] top-[-10px] text-5xl opacity-5 select-none font-logo">
+                  <div className="absolute right-[-20px] top-[-10px] text-4xl sm:text-5xl opacity-5 select-none font-logo pointer-events-none">
                     Slotword
                   </div>
 
-                  <span className="text-xs text-[#6F625B] font-display font-bold uppercase tracking-wider">
+                  <span className="text-[10px] sm:text-xs text-[#6F625B] font-display font-bold uppercase tracking-wider block">
                     Simulated Wallet Balance
                   </span>
-                  <div className="text-3xl font-logo font-black text-[#3D342F] my-1 font-mono">
+                  <div className="text-2xl sm:text-3xl font-logo font-black text-[#3D342F] my-1 font-mono">
                     {wallet.balance.toFixed(5)} SOL
                   </div>
                   
-                  <div className="text-[10px] font-mono text-[#998D85] bg-white/55 p-1.5 rounded-lg border border-[#E7DCCB]/60 mt-4 break-all">
+                  <div className="text-[10px] font-mono text-[#998D85] bg-white/55 p-1.5 rounded-lg border border-[#E7DCCB]/60 mt-3 break-all">
                     Address: {wallet.address}
                   </div>
                 </div>
 
                 {/* Ledger Receipts Logs */}
-                <h4 className="text-xs font-logo font-bold uppercase tracking-wider text-[#6F625B] text-left mb-3">
+                <h4 className="text-[11px] sm:text-xs font-logo font-bold uppercase tracking-wider text-[#6F625B] text-left mb-2.5 shrink-0">
                   Pouch Ledger Receipts
                 </h4>
                 
-                <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[180px] sm:max-h-[260px] overflow-y-auto pr-1 flex-1 min-h-[100px]">
                   {walletHistory.map((log, idx) => (
                     <div
                       key={idx}
-                      className="flex justify-between items-center p-3 bg-[#FFF9F0] border border-[#E7DCCB]/60 rounded-xl text-xs"
+                      className="flex justify-between items-center p-2.5 sm:p-3 bg-[#FFF9F0] border border-[#E7DCCB]/60 rounded-xl text-xs"
                     >
                       <div className="text-left">
-                        <div className="font-logo font-bold text-[#3D342F]">{log.desc}</div>
+                        <div className="font-logo font-bold text-[#3D342F] text-xs">{log.desc}</div>
                         <div className="text-[10px] text-[#998D85]">{log.time}</div>
                       </div>
-                      <div className={`font-mono font-bold ${log.type === 'plus' ? 'text-[#79B96B]' : 'text-[#E45C75]'}`}>
+                      <div className={`font-mono font-bold text-xs ${log.type === 'plus' ? 'text-[#79B96B]' : 'text-[#E45C75]'}`}>
                         {log.amount}
                       </div>
                     </div>
@@ -570,19 +604,28 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Replenish funds block */}
-              <div className="pt-4 border-t border-[#E7DCCB] space-y-3">
+              {/* Replenish funds block & Disconnect option */}
+              <div className="pt-3 sm:pt-4 border-t border-[#E7DCCB] space-y-2 shrink-0 mt-3">
                 <motion.button
                   onClick={handleTopupSimulatedWallet}
                   whileTap={{ scale: 0.96 }}
-                  className="w-full py-3 bg-[#65B9E8] hover:bg-[#4BA8DC] text-white font-display font-bold text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full py-2.5 bg-[#65B9E8] hover:bg-[#4BA8DC] text-white font-display font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  Get Testnet SOL (Faucet)
+                  <span>Get Testnet SOL (Faucet)</span>
                 </motion.button>
                 
-                <p className="text-[10px] text-center text-[#998D85] leading-relaxed">
-                  *Funds are purely simulated on-device for development sandboxing. This contains no actual real-world currency risk.
+                <motion.button
+                  onClick={handleDisconnectWallet}
+                  whileTap={{ scale: 0.96 }}
+                  className="w-full py-2.5 bg-[#FAF4EA] hover:bg-[#FDECE7] text-[#E45C75] border border-[#E7DCCB] hover:border-[#F28C6F]/40 font-display font-bold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-[#E45C75] shrink-0" />
+                  <span>Disconnect SOL Wallet</span>
+                </motion.button>
+
+                <p className="text-[10px] text-center text-[#998D85] leading-relaxed pt-0.5">
+                  *Funds are simulated on-device for puzzle verifications. You can reconnect anytime.
                 </p>
               </div>
 
@@ -590,6 +633,13 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* 6. HOW TO PLAY HELP WIDGET FOR YOUNGER AUDIENCE & BEGINNERS */}
+      <HowToPlayModal
+        isOpen={howToPlayOpen}
+        onClose={() => setHowToPlayOpen(false)}
+        onStartPlay={() => setCurrentScreen('daily')}
+      />
 
     </div>
   );

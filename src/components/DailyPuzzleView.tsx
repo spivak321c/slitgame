@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { HelpCircle, RefreshCw, Flame, ArrowLeft, CheckCircle, ShieldAlert, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { ScreenType, WalletState, calculateLetterStates } from '../types';
 import { sound } from '../utils/audio';
+import HowToPlayModal from './HowToPlayModal';
 
 interface DailyPuzzleViewProps {
   onNavigate: (screen: ScreenType) => void;
@@ -41,6 +42,7 @@ export default function DailyPuzzleView({
   
   // Custom technical info modal
   const [infoOpen, setInfoOpen] = useState(false);
+  const [howToPlayModalOpen, setHowToPlayModalOpen] = useState(false);
 
   // Initialize Word
   useEffect(() => {
@@ -198,11 +200,22 @@ export default function DailyPuzzleView({
           Dashboard
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <button
+            onClick={() => setHowToPlayModalOpen(true)}
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 bg-[#FAF4EA] hover:bg-[#F4EBDD] border border-[#E7DCCB] rounded-full text-xs text-[#3D342F] font-bold font-display transition-colors cursor-pointer shrink-0"
+            title="Open How to Play Guide"
+            aria-label="How to Play Guide"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-[#65B9E8] shrink-0" />
+            <span className="hidden sm:inline">How to Play</span>
+            <span className="sm:hidden text-[11px]">Help</span>
+          </button>
+
           {isDaily ? (
             <div className="flex items-center gap-1.5 px-3 py-1 bg-[#FFF3D6] border border-[#F2B84B] rounded-full text-xs text-[#3D342F] font-bold">
               <Lock className="w-3.5 h-3.5 text-[#F2B84B]" />
-              <span>Today's word is locked ✓</span>
+              <span>Locked ✓</span>
               <button
                 onClick={() => setInfoOpen(!infoOpen)}
                 className="w-4 h-4 rounded-full bg-[#3D342F]/10 hover:bg-[#3D342F]/20 flex items-center justify-center font-bold text-[10px]"
@@ -544,6 +557,12 @@ export default function DailyPuzzleView({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Kid-Friendly How to Play Help Modal */}
+      <HowToPlayModal
+        isOpen={howToPlayModalOpen}
+        onClose={() => setHowToPlayModalOpen(false)}
+      />
 
     </div>
   );

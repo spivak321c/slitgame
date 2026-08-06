@@ -96,9 +96,9 @@ export default function LeaderboardView({ onNavigate, playerSolved, playerAttemp
         </p>
       </div>
 
-      {/* Standings List (Tactile Alternating Rows) */}
-      <div className="bg-[#FFFCF7] border-2 border-[#E7DCCB] rounded-3xl overflow-hidden shadow-card p-2 mb-8">
-        <div className="space-y-2">
+      {/* Standings List (Clean Tactile Rows) */}
+      <div className="bg-[#FFFCF7] border border-[#E7DCCB] rounded-2xl overflow-hidden shadow-card p-2 mb-8">
+        <div className="space-y-1.5">
           
           {listToDisplay.map((entry, index) => {
             const isTop3 = entry.rank <= 3;
@@ -107,9 +107,9 @@ export default function LeaderboardView({ onNavigate, playerSolved, playerAttemp
             return (
               <div
                 key={index}
-                className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
                   entry.isPlayer
-                    ? 'bg-[#FFF3D6] border-[#F2B84B] shadow-sm font-semibold scale-[1.01]'
+                    ? 'bg-[#FFF3D6] border-[#F2B84B] font-semibold'
                     : index % 2 === 0
                     ? 'bg-[#FFFCF7] border-transparent'
                     : 'bg-[#F4EBDD]/40 border-transparent'
