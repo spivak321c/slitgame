@@ -1,18 +1,101 @@
 export type ScreenType =
   | 'landing'
   | 'dashboard'
-  | 'daily'
-  | 'practice'
+  | 'play'
   | 'duel'
-  | 'verify'
   | 'leaderboard'
-  | 'achievements';
+  | 'achievements'
+  | 'profile';
 
-export interface WalletState {
-  connected: boolean;
-  address: string;
-  balance: number; // in SOL
+// ── Difficulty & Word Length Variation ────────────────────────────────
+
+export type Difficulty = 'easy' | 'classic' | 'hard';
+
+export interface DifficultyConfig {
+  id: Difficulty;
+  label: string;
+  wordLength: number;
+  attempts: number;
+  baseReward: number; // coins
+  xpReward: number;
+  description: string;
 }
+
+export const DIFFICULTIES: DifficultyConfig[] = [
+  {
+    id: 'easy',
+    label: 'Quick',
+    wordLength: 4,
+    attempts: 5,
+    baseReward: 15,
+    xpReward: 30,
+    description: 'Four little letters. Perfect warm-up.',
+  },
+  {
+    id: 'classic',
+    label: 'Classic',
+    wordLength: 5,
+    attempts: 6,
+    baseReward: 25,
+    xpReward: 50,
+    description: 'The signature five-letter test.',
+  },
+  {
+    id: 'hard',
+    label: 'Grand',
+    wordLength: 6,
+    attempts: 7,
+    baseReward: 40,
+    xpReward: 80,
+    description: 'Six letters. For word wizards only.',
+  },
+];
+
+export function difficultyForLength(length: number): DifficultyConfig {
+  return DIFFICULTIES.find(d => d.wordLength === length) ?? DIFFICULTIES[1];
+}
+
+// ── Player Economy: Coins, XP & Levels ────────────────────────────────
+
+export interface PlayerProfile {
+  coins: number;
+  xp: number;
+  username: string;
+  avatar: string;
+  gamesPlayed: number;
+  gamesWon: number;
+  duelsPlayed: number;
+  duelsWon: number;
+  bestAttempts: Record<Difficulty, number | null>;
+}
+
+// Level curve: each level costs 100 more XP than the last.
+// XP needed to reach level N: 100 * (N-1) * N / 2
+export function levelFromXp(xp: number): { level: number; intoLevel: number; neededForLevel: number } {
+  let level = 1;
+  while (xp >= 100 * level) {
+    xp -= 100 * level;
+    level += 1;
+  }
+  return { level, intoLevel: xp, neededForLevel: 100 * level };
+}
+
+export const LEVEL_TITLES: Record<number, string> = {
+  1: 'Fresh Solver',
+  2: 'Letter Learner',
+  3: 'Word Explorer',
+  4: 'Pattern Finder',
+  5: 'Wordsmith',
+  6: 'Word Wizard',
+  7: 'Grand Lexicon',
+  8: 'Word Master',
+};
+
+export function levelTitle(level: number): string {
+  return LEVEL_TITLES[level] ?? 'Word Legend';
+}
+
+// ── Game State ────────────────────────────────────────────────────────
 
 export interface GuessRow {
   letters: string[];
@@ -24,8 +107,7 @@ export interface GameState {
   guesses: string[];
   currentGuess: string;
   status: 'playing' | 'won' | 'lost';
-  isDaily: boolean;
-  streakIncremented: boolean;
+  difficulty: Difficulty;
 }
 
 export interface Opponent {
@@ -40,26 +122,17 @@ export interface Opponent {
 export interface DuelSession {
   id: string;
   opponent: Opponent;
-  entryFee: number; // in SOL
-  prizePool: number; // in SOL
+  entryFee: number; // in coins
+  prizePool: number; // in coins
   playerGuesses: string[];
   opponentGuesses: string[];
   playerCurrentGuess: string;
   opponentCurrentGuess: string;
   playerStatus: 'playing' | 'won' | 'lost';
   opponentStatus: 'playing' | 'won' | 'lost';
-  playerTimeLeft: number;
-  opponentTimeLeft: number;
   word: string;
-  step: 'setup' | 'commit' | 'reveal' | 'finished';
-  playerCommitted: boolean;
-  opponentCommitted: boolean;
-  playerRevealed: boolean;
-  opponentRevealed: boolean;
-  playerSeed: string;
-  playerHash: string;
-  opponentSeed: string;
-  opponentHash: string;
+  wordLength: number;
+  step: 'setup' | 'finished';
 }
 
 export interface Achievement {
@@ -69,25 +142,41 @@ export interface Achievement {
   unlocked: boolean;
   unlockedAt?: string;
   metric?: string;
-  iconType: 'streak-chain' | 'triple-tile' | 'envelope' | 'magnifier';
+  iconType: 'tile' | 'bolt' | 'shield' | 'coins' | 'star';
 }
 
-export interface VerifiedDay {
-  date: string;
-  word: string;
-  seed: string;
-  hash: string; // SHA-256
-  txSignature: string;
-  blockTime: string;
-}
+// ── Word Banks by Length ──────────────────────────────────────────────
 
-// Word list with positive, simple learning associations
-export const WORDS_BANK = [
-  'CRAFT', 'CLERK', 'TEACH', 'WRITE', 'PUZZL',
+export const WORDS_BANK_4: string[] = [
+  'GAME', 'WORD', 'FIRE', 'RAIN', 'STAR', 'MOON', 'TREE', 'LAKE', 'SAND', 'WIND',
+  'FLOW', 'MIND', 'NOTE', 'ROCK', 'BIRD', 'FISH', 'LEAF', 'SONG', 'LOVE', 'TIME',
+  'BEAR', 'BOOK', 'CAKE', 'DUCK', 'GOLD', 'HAND', 'JUMP', 'KITE', 'LION', 'NEST',
+];
+
+export const WORDS_BANK_5: string[] = [
+  'CRAFT', 'CLERK', 'TEACH', 'WRITE', 'PIXEL',
   'SMART', 'CREAM', 'SHAPE', 'STONE', 'BOARD',
   'STAMP', 'FLAME', 'LIGHT', 'GRAPE', 'CORAL',
-  'LEAFY', 'HONEY', 'FRESH', 'MATCH', 'WORLD'
+  'LEAFY', 'HONEY', 'FRESH', 'MATCH', 'WORLD',
 ];
+
+export const WORDS_BANK_6: string[] = [
+  'PUZZLE', 'FLOWER', 'GARDEN', 'CASTLE', 'RIDDLE',
+  'SILVER', 'SUMMER', 'WINTER', 'BOTTLE', 'CANDLE',
+  'DINNER', 'FAMILY', 'LADDER', 'MARKET', 'POCKET',
+  'SECRET', 'WONDER', 'PLANET', 'TICKET', 'BRIDGE',
+];
+
+export function wordsForLength(length: number): string[] {
+  if (length === 4) return WORDS_BANK_4;
+  if (length === 6) return WORDS_BANK_6;
+  return WORDS_BANK_5;
+}
+
+export function randomWord(length: number): string {
+  const bank = wordsForLength(length);
+  return bank[Math.floor(Math.random() * bank.length)];
+}
 
 export const OPPONENTS: Opponent[] = [
   {
@@ -96,7 +185,7 @@ export const OPPONENTS: Opponent[] = [
     level: 'Letter Learner',
     avatar: '🦊',
     accuracy: 0.65,
-    speedSeconds: 150
+    speedSeconds: 150,
   },
   {
     id: 'clara',
@@ -104,7 +193,7 @@ export const OPPONENTS: Opponent[] = [
     level: 'Word Explorer',
     avatar: '🦉',
     accuracy: 0.78,
-    speedSeconds: 120
+    speedSeconds: 120,
   },
   {
     id: 'wendy',
@@ -112,74 +201,54 @@ export const OPPONENTS: Opponent[] = [
     level: 'Pattern Finder',
     avatar: '🐨',
     accuracy: 0.90,
-    speedSeconds: 90
-  }
+    speedSeconds: 90,
+  },
 ];
 
 export const INITIAL_ACHIEVEMENTS: Achievement[] = [
   {
-    id: 'streak-7',
-    title: 'Paper Chain Badge',
-    description: 'Maintain a 7-day daily streak of puzzle mastery.',
+    id: 'first-win',
+    title: 'First Word Smash',
+    description: 'Solve your very first puzzle of any difficulty.',
     unlocked: false,
-    iconType: 'streak-chain'
+    iconType: 'tile',
   },
   {
     id: 'solve-3',
-    title: 'Golden Stack Badge',
-    description: 'Solve any Word Puzzle within 3 attempts.',
+    title: 'Speed Solver',
+    description: 'Solve any puzzle within 3 attempts.',
     unlocked: false,
-    iconType: 'triple-tile'
+    iconType: 'bolt',
   },
   {
-    id: 'commit-reveal',
-    title: 'Secure Sealer Badge',
-    description: 'Complete a Match Duel using secure Commit-Reveal verification.',
+    id: 'duel-win',
+    title: 'Duel Champion',
+    description: 'Win your first match duel against a rival.',
     unlocked: false,
-    iconType: 'envelope'
+    iconType: 'shield',
   },
   {
-    id: 'verify-lookup',
-    title: 'True Detective Badge',
-    description: 'Inspect yesterday\'s proof of fairness in the Verification Center.',
+    id: 'coins-500',
+    title: 'Coin Collector',
+    description: 'Stack up 500 coins in your pouch.',
     unlocked: false,
-    iconType: 'magnifier'
-  }
-];
-
-export const HISTORICAL_DAYS: VerifiedDay[] = [
-  {
-    date: '2026-08-03',
-    word: 'HONEY',
-    seed: 'warm-honey-9281-sweet',
-    hash: '5a4fe2919d67ba6d2ee649ef92f2584cfb77f3a61bc5b7b966cfb7498c19eb9e',
-    txSignature: '4zUv8Xb7Qp9Ym2vCwH8eN3nL8yB5uV8xC3sT4rK2fG1hD9aE5bJ6oW3qE4r',
-    blockTime: '2026-08-03 23:59:12'
+    iconType: 'coins',
   },
   {
-    date: '2026-08-02',
-    word: 'CRAFT',
-    seed: 'tactile-craft-1102-puzz',
-    hash: '8f75b253b8b1a8dcf8c1e8c97cfb77a61bc5b7b966cfb7498c19eb9e248b111a',
-    txSignature: '5uT8Xb7Qp9Ym2vCwH8eN3nL8yB5uV8xC3sT4rK2fG1hD9aE5bJ6oW3qE4rD3s8x',
-    blockTime: '2026-08-02 23:58:44'
+    id: 'level-5',
+    title: 'Rising Star',
+    description: 'Reach Level 5 and earn the Wordsmith title.',
+    unlocked: false,
+    iconType: 'star',
   },
-  {
-    date: '2026-08-01',
-    word: 'SHAPE',
-    seed: 'perfect-shape-5590-round',
-    hash: 'cf7828c6fb253b8b1a8dc73bb22ff6cfb77f3a61bc5b7b966cfb7498c19eb9e782',
-    txSignature: '2xR7vC3sT4rK2fG1hD9aE5bJ6oW3qE4rB5uV8x4zUv8Xb7Qp9Ym2vCwH8eN3nL8',
-    blockTime: '2026-08-01 23:59:01'
-  }
 ];
 
 export function calculateLetterStates(guess: string, answer: string): ('correct' | 'present' | 'absent')[] {
-  const states: ('correct' | 'present' | 'absent')[] = Array(5).fill('absent');
+  const length = answer.length;
+  const states: ('correct' | 'present' | 'absent')[] = Array(length).fill('absent');
   const answerLetterCount: Record<string, number> = {};
 
-  // Build letters count for those not in correct position
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < length; i++) {
     const char = answer[i];
     if (guess[i] === char) {
       states[i] = 'correct';
@@ -188,8 +257,7 @@ export function calculateLetterStates(guess: string, answer: string): ('correct'
     }
   }
 
-  // Handle present letters
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < length; i++) {
     if (states[i] !== 'correct') {
       const char = guess[i];
       if (answerLetterCount[char] && answerLetterCount[char] > 0) {

@@ -1,176 +1,125 @@
-import { Star, Trophy, Award, ArrowLeft } from 'lucide-react';
-import { ScreenType } from '../types';
+import { Star, ArrowLeft, Medal, Coins, Trophy, Gamepad2, Swords } from 'lucide-react';
+import { ScreenType, PlayerProfile, levelFromXp, levelTitle } from '../types';
+import RivalsStrip from './RivalsStrip';
 
 interface LeaderboardViewProps {
   onNavigate: (screen: ScreenType) => void;
-  playerSolved: boolean;
-  playerAttempts: number;
+  profile: PlayerProfile;
 }
 
-export default function LeaderboardView({ onNavigate, playerSolved, playerAttempts }: LeaderboardViewProps) {
-  // Static mock entries that feel like a friendly school tournament board
-  const baseEntries = [
-    {
-      rank: 1,
-      name: 'Clara Cleanwood 🦉',
-      level: 'Word Explorer',
-      attempts: 3,
-      speed: '82 seconds',
-      badge: 'Golden Stack',
-      isPlayer: false,
-    },
-    {
-      rank: 2,
-      name: 'Wordsmith Wendy 🐨',
-      level: 'Pattern Finder',
-      attempts: 3,
-      speed: '96 seconds',
-      badge: 'True Detective',
-      isPlayer: false,
-    },
-    {
-      rank: 3,
-      name: 'Gary the Fox 🦊',
-      level: 'Letter Learner',
-      attempts: 4,
-      speed: '124 seconds',
-      badge: 'Paper Chain',
-      isPlayer: false,
-    },
-    {
-      rank: 4,
-      name: 'Squirrel Sammy 🐿️',
-      level: 'Guesser',
-      attempts: 5,
-      speed: '142 seconds',
-      badge: 'Puzzle Solver',
-      isPlayer: false,
-    },
-  ];
+export default function LeaderboardView({ onNavigate, profile }: LeaderboardViewProps) {
+  const playerLevel = levelFromXp(profile.xp).level;
 
-  // Insert player if they completed the puzzle
-  let listToDisplay = [...baseEntries];
-  if (playerSolved) {
-    const playerEntry = {
-      rank: playerAttempts <= 3 ? 2 : playerAttempts === 4 ? 3 : 4,
-      name: 'You (Solver) 🚀',
-      level: 'Pattern Finder',
-      attempts: playerAttempts,
-      speed: '84 seconds',
-      badge: playerAttempts <= 3 ? 'Golden Stack' : 'Secure Sealer',
-      isPlayer: true,
-    };
-    
-    // Insert into correct index based on attempts
-    listToDisplay.splice(playerEntry.rank - 1, 0, playerEntry);
-    
-    // Adjust ranks of subsequent rows
-    listToDisplay = listToDisplay.map((item, idx) => ({
-      ...item,
-      rank: idx + 1,
-    }));
-  }
+  const hasPlayed = profile.gamesPlayed > 0 || profile.duelsPlayed > 0;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
-      
-      {/* Top Navigation Header */}
+
       <div className="flex items-center justify-between mb-6 pb-3 border-b border-[#E7DCCB]">
         <button
           onClick={() => onNavigate('dashboard')}
-          className="flex items-center gap-1.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors"
+          className="flex items-center gap-1.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           Dashboard
         </button>
-        <span className="text-xs text-[#998D85] font-mono">Today's Standings</span>
+        <span className="text-xs text-[#998D85] font-mono">Local Standings</span>
       </div>
 
-      {/* Header Info */}
       <div className="text-center max-w-lg mx-auto mb-8">
         <h1 className="text-3xl font-logo font-extrabold text-[#3D342F] mb-2">
-          Daily Standings
+          Solver Standings
         </h1>
         <p className="text-sm text-[#6F625B]">
-          Earn progress stamps and stars! Rankings are updated once you save your verified solve on-chain.
+          Rank by coin pouch size. Solve puzzles and win duels to climb the board.
         </p>
       </div>
 
-      {/* Standings List (Clean Tactile Rows) */}
-      <div className="bg-[#FFFCF7] border border-[#E7DCCB] rounded-2xl overflow-hidden shadow-card p-2 mb-8">
-        <div className="space-y-1.5">
-          
-          {listToDisplay.map((entry, index) => {
-            const isTop3 = entry.rank <= 3;
-            const rankIcon = entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : '✨';
-            
-            return (
-              <div
-                key={index}
-                className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
-                  entry.isPlayer
-                    ? 'bg-[#FFF3D6] border-[#F2B84B] font-semibold'
-                    : index % 2 === 0
-                    ? 'bg-[#FFFCF7] border-transparent'
-                    : 'bg-[#F4EBDD]/40 border-transparent'
-                }`}
-              >
-                {/* Left Section: Rank + Name */}
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-white border border-[#E7DCCB] flex items-center justify-center text-sm shadow-sm font-logo font-extrabold text-[#3D342F]">
-                    {isTop3 ? rankIcon : entry.rank}
-                  </div>
-                  
-                  <div className="text-left">
-                    <div className="font-logo font-extrabold text-[#3D342F] flex items-center gap-1.5">
-                      {entry.name}
-                      {entry.isPlayer && (
-                        <span className="px-2 py-0.5 bg-[#E45C75] text-white text-[9px] rounded-full uppercase tracking-wider font-display font-bold">
-                          You
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-[#6F625B] font-display font-medium">
-                      {entry.level}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Section: Attempts + Speed */}
-                <div className="text-right flex items-center gap-6">
-                  <div className="text-xs text-[#6F625B]">
-                    <div className="font-logo font-extrabold text-sm text-[#3D342F]">
-                      {entry.attempts} {entry.attempts === 1 ? 'try' : 'tries'}
-                    </div>
-                    <div>{entry.speed}</div>
-                  </div>
-
-                  {/* Stamp Sticker Meta */}
-                  <div className="hidden sm:flex w-10 h-10 rounded-full bg-white border border-[#E7DCCB] items-center justify-center text-xs shadow-sm select-none" title={`Earned ${entry.badge} Badge`}>
-                    {entry.badge === 'Golden Stack' ? '📚' : entry.badge === 'True Detective' ? '🔍' : '✉️'}
-                  </div>
-                </div>
-
-              </div>
-            );
-          })}
-
-        </div>
+      <div className="bg-[#FFFCF7] border border-[#E7DCCB] rounded-2xl p-4 mb-6 shadow-card">
+        <RivalsStrip onDuel={() => onNavigate('duel')} />
       </div>
 
-      {/* Plain Language Ranking Rules */}
+      <div className="bg-[#FFFCF7] border border-[#E7DCCB] rounded-2xl overflow-hidden shadow-card p-2 mb-8">
+        {hasPlayed ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between p-3.5 rounded-xl border bg-[#FFF3D6] border-[#F2B84B]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-white border border-[#E7DCCB] flex items-center justify-center text-sm shadow-sm font-logo font-extrabold text-[#3D342F]">
+                  <Medal className="w-4 h-4 text-[#F2B84B]" strokeWidth={2.25} />
+                </div>
+                <div className="text-left">
+                  <div className="font-logo font-extrabold text-[#3D342F] flex items-center gap-1.5">
+                    You ({profile.username})
+                    <span className="px-2 py-0.5 bg-[#E45C75] text-white text-[9px] rounded-full uppercase tracking-wider font-display font-bold">
+                      You
+                    </span>
+                  </div>
+                  <div className="text-xs text-[#6F625B] font-display font-medium">
+                    {levelTitle(playerLevel)}
+                  </div>
+                </div>
+              </div>
+              <div className="text-right flex items-center gap-5">
+                <div className="text-xs text-[#6F625B]">
+                  <div className="font-logo font-extrabold text-sm text-[#3D342F] flex items-center justify-end gap-1">
+                    <Coins className="w-3.5 h-3.5 text-[#F2B84B]" />
+                    {profile.coins}
+                  </div>
+                  <div className="flex items-center gap-1 justify-end">
+                    <Trophy className="w-3 h-3 text-[#65B9E8]" />
+                    {profile.gamesWon} solved
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 text-center space-y-3">
+            <Trophy className="w-7 h-7 text-[#998D85] mx-auto opacity-50" />
+            <p className="text-xs text-[#6F625B] max-w-sm mx-auto">
+              Live solver rankings arrive with the upcoming server backend. For now your
+              standings are <strong className="text-[#3D342F]">local-only</strong> — play
+              a puzzle or duel to claim your first rank.
+            </p>
+            <button
+              onClick={() => onNavigate('play')}
+              className="px-4 py-2 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_2px_0_#AF324B] transition-all cursor-pointer"
+            >
+              Play your first puzzle
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="bg-[#FFF9F0] border border-[#E7DCCB] rounded-2xl p-5 text-left text-xs leading-relaxed text-[#6F625B]">
         <h3 className="font-logo font-bold text-sm text-[#3D342F] mb-2 flex items-center gap-1">
           <Star className="w-4 h-4 text-[#F2B84B] fill-[#F2B84B]" />
-          Friendly Ranking Guidelines
+          Ranking Rules
         </h3>
         <ul className="list-disc pl-4 space-y-1">
-          <li>Rankings are primary sorted by the **fewest guess attempts** required to solve today's hidden word.</li>
-          <li>Tiebreaker rules are calculated based on your total elapsed solving time in seconds.</li>
-          <li>Connecting your card pouch saves your verified solve as an immortal cryptographic stamp.</li>
+          <li>Rankings are sorted by coins in each solver's pouch.</li>
+          <li>Win match duels to double your stake and jump up the board.</li>
+          <li>Every solve and duel also earns XP toward your level title.</li>
+          <li>Coins are purely for fun — no real money involved, ever.</li>
         </ul>
       </div>
 
+      <div className="grid grid-cols-2 gap-3 mt-6">
+        <div className="bg-[#FFFCF7] border border-[#E7DCCB] rounded-2xl p-4 text-center">
+          <Gamepad2 className="w-4 h-4 text-[#E45C75] mx-auto mb-1.5" />
+          <div className="font-logo font-black text-lg text-[#3D342F]">{profile.gamesWon}</div>
+          <div className="text-[10px] font-mono text-[#998D85] uppercase tracking-wide">Your solves</div>
+        </div>
+        <div className="bg-[#FFFCF7] border border-[#E7DCCB] rounded-2xl p-4 text-center">
+          <Swords className="w-4 h-4 text-[#F28C6F] mx-auto mb-1.5" />
+          <div className="font-logo font-black text-lg text-[#3D342F]">{profile.duelsWon}</div>
+          <div className="text-[10px] font-mono text-[#998D85] uppercase tracking-wide">Duel wins</div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center gap-1.5 mt-4 text-[10.5px] font-mono text-[#998D85]">
+        Lv {playerLevel} · {levelTitle(playerLevel)}
+      </div>
     </div>
   );
 }

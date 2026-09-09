@@ -1,6 +1,6 @@
 {
   "name": "Slotword",
-  "description": "A playful, tactile word puzzle workshop with on-chain verification and friendly duels.",
+  "description": "A playful, tactile word puzzle workshop with coins, XP, levels, and friendly match duels.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
