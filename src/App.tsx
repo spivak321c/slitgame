@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Flame,
@@ -20,13 +20,13 @@ import {
 import {
   ScreenType,
   PlayerProfile,
-  Achievement,
-  INITIAL_ACHIEVEMENTS,
   levelFromXp,
   levelTitle,
   Difficulty,
   DIFFICULTIES,
 } from './types';
+import { useGameStore, useSessionStore } from './store/gameStore';
+import { ensureAnonymousSession } from './lib/supabase';
 import { sound } from './utils/audio';
 import { DuelRoom, OPEN_DUEL_ROOMS, waitingRoomCount } from './data/duelRooms';
 import LandingPage from './components/LandingPage';
@@ -37,26 +37,32 @@ import LeaderboardView from './components/LeaderboardView';
 import AchievementsView from './components/AchievementsView';
 import ProfileView from './components/ProfileView';
 
-const STARTING_COINS = 100;
-
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('landing');
 
-  // Player profile: coins + XP economy (pure web2)
-  const [profile, setProfile] = useState<PlayerProfile>({
-    coins: STARTING_COINS,
-    xp: 0,
-    username: 'paperpilot',
-    avatar: '🥇',
-    gamesPlayed: 0,
-    gamesWon: 0,
-    duelsPlayed: 0,
-    duelsWon: 0,
-    bestAttempts: { easy: null, classic: null, hard: null },
-  });
+  // Player profile: coins + XP economy. Lives in the persisted game store so
+  // progress survives a refresh (previously reset to defaults on every load).
+  const profile = useGameStore(s => s.profile);
+  const setProfile = useGameStore(s => s.setProfile);
+  const coinHistory = useGameStore(s => s.coinHistory);
+  const setCoinHistory = useGameStore(s => s.setCoinHistory);
+  const achievements = useGameStore(s => s.achievements);
+  const setAchievements = useGameStore(s => s.setAchievements);
+
+  // Anonymous backend session for duels (Phase 1). Resolves to local-only
+  // mode (playerId null) when Supabase isn't configured or offline.
+  const setSession = useSessionStore(s => s.setSession);
+  useEffect(() => {
+    let cancelled = false;
+    ensureAnonymousSession().then(id => {
+      if (!cancelled) setSession(id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [setSession]);
 
   const [pouchOpen, setPouchOpen] = useState(false);
-  const [coinHistory, setCoinHistory] = useState<Array<{ desc: string; amount: string; type: 'plus' | 'minus'; time: string }>>([]);
 
   // Pending duel room from dashboard live rooms
   const [pendingJoinRoom, setPendingJoinRoom] = useState<DuelRoom | null>(null);
@@ -65,9 +71,6 @@ export default function App() {
     setPendingJoinRoom(room);
     setCurrentScreen('duel');
   };
-
-  // Sticker achievement stamps
-  const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
 
   // Audio mute/unmute state
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -168,6 +171,9 @@ export default function App() {
       const bonus = Math.max(0, cfg.attempts - attempts) * 2;
       addCoins(cfg.baseReward + bonus, `Solved ${cfg.label} puzzle`);
       addXp(cfg.xpReward);
+      // Confetti stars on every solve — previously only level-ups,
+      // achievement unlocks, and the coin faucet celebrated.
+      triggerCelebration();
       handleUnlockAchievement('first-win');
       if (attempts <= 3) handleUnlockAchievement('solve-3');
     } else {

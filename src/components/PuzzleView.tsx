@@ -95,6 +95,12 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
     setGuesses(nextGuesses);
     setCurrentGuess('');
 
+    // Per-tile reveal audio, staggered to sync with the flip animation (colIdx * 0.08).
+    // Matches the DuelView reveal pattern; each tile's pitch reflects its status.
+    calculateLetterStates(guess, word).forEach((st, idx) =>
+      sound.playTileReveal(idx * 0.08, st)
+    );
+
     const won = guess === word;
     const lost = !won && nextGuesses.length >= maxAttempts;
 
@@ -321,6 +327,13 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
             row.map((tile, colIdx) => {
               const shouldFlip =
                 rowIdx < guesses.length;
+              // Pop only tiles in the row actively being typed, and only once
+              // they hold a letter. The span remounts (key = letter) so each
+              // keystroke replays a springy "letterpress stamp". The outer tile
+              // keeps its stable key + flip animation untouched.
+              const popLetter = rowIdx === guesses.length && tile.letter !== '';
+              // Winning row: after its flip lands, hop each tile in a wave.
+              const isWinningRow = status === 'won' && rowIdx === guesses.length - 1;
               return (
                 <motion.div
                   key={`${rowIdx}-${colIdx}`}
@@ -330,15 +343,39 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
                       ? {
                           rotateX: [0, 90, 0],
                           backgroundColor: ['#FFFCF7', '#FFFCF7', ''],
+                          ...(isWinningRow ? { y: [0, -18, 0, -6, 0] } : {}),
                         }
                       : {}
                   }
-                  transition={{ duration: 0.5, delay: colIdx * 0.08, ease: 'easeInOut' }}
+                  transition={
+                    isWinningRow
+                      ? {
+                          // Flip timing stays identical to normal rows.
+                          rotateX: { duration: 0.5, delay: colIdx * 0.08, ease: 'easeInOut' },
+                          backgroundColor: { duration: 0.5, delay: colIdx * 0.08, ease: 'easeInOut' },
+                          // Hop starts once this tile's flip has landed.
+                          y: {
+                            duration: 0.6,
+                            delay: 0.6 + colIdx * 0.08,
+                            times: [0, 0.35, 0.65, 0.85, 1],
+                            ease: ['easeOut', 'easeIn', 'easeOut', 'easeIn'],
+                          },
+                        }
+                      : { duration: 0.5, delay: colIdx * 0.08, ease: 'easeInOut' }
+                  }
                   className={`w-11 h-11 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center font-logo font-black text-xl sm:text-2xl select-none ${
                     statusColor[tile.status] ?? statusColor.empty
                   }`}
                 >
-                  {tile.letter}
+                  <motion.span
+                    key={tile.letter}
+                    initial={popLetter ? { scale: 0.3, opacity: 0 } : false}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 520, damping: 20 }}
+                    className="inline-block"
+                  >
+                    {tile.letter}
+                  </motion.span>
                 </motion.div>
               );
             })

@@ -71,3 +71,28 @@ body {
   transform: translateY(2px);
 }
 
+/* Shake feedback for invalid / too-short guesses.
+   Paired with the `animate-[shake_0.4s_ease-in-out]` utility used in
+   PuzzleView and DuelView. A damped horizontal oscillation with a hair
+   of rotation, tuned to feel like a paper tile rattling on the board. */
+@keyframes shake {
+  0%   { transform: translateX(0) rotate(0); }
+  15%  { transform: translateX(-6px) rotate(-1deg); }
+  30%  { transform: translateX(6px) rotate(1deg); }
+  45%  { transform: translateX(-4px) rotate(-0.5deg); }
+  60%  { transform: translateX(4px) rotate(0.5deg); }
+  75%  { transform: translateX(-2px) rotate(0); }
+  100% { transform: translateX(0) rotate(0); }
+}
+
+/* Hide scrollbars on horizontally-scrolling chip rows while keeping
+   the content scrollable (used by the header player-status cluster
+   on narrow viewports). Covers WebKit, Firefox, and legacy IE/Edge. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
