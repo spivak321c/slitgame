@@ -27,7 +27,7 @@ import AttemptKeys from './AttemptKeys';
 
 interface PuzzleViewProps {
   onNavigate: (screen: ScreenType) => void;
-  onSolve: (attempts: number, difficulty: Difficulty, won: boolean) => void;
+  onSolve: (attempts: number, difficulty: Difficulty, won: boolean, guesses?: string[]) => void;
 }
 
 const KEY_ROWS = [
@@ -107,12 +107,12 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
     if (won) {
       sound.playWinSound();
       setStatus('won');
-      onSolve(nextGuesses.length, difficulty.id, true);
+      onSolve(nextGuesses.length, difficulty.id, true, nextGuesses);
       setTimeout(() => setShowResult(true), 900);
     } else if (lost) {
       sound.playLoseSound();
       setStatus('lost');
-      onSolve(nextGuesses.length, difficulty.id, false);
+      onSolve(nextGuesses.length, difficulty.id, false, nextGuesses);
       setTimeout(() => setShowResult(true), 900);
     }
   }, [status, currentGuess, wordLength, guesses, word, maxAttempts, difficulty.id, onSolve]);

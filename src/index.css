@@ -96,3 +96,31 @@ body {
   display: none;
 }
 
+/* ── Phase 3: Accessibility ──────────────────────────────────────────── */
+
+/* Dyslexia-friendly font mode — increases letter-spacing, line-height,
+   and word-spacing for easier reading. Applied when the player toggles
+   the "easier reading" option in their profile. */
+.font-dyslexia {
+  letter-spacing: 0.035em;
+  word-spacing: 0.12em;
+  line-height: 1.7;
+}
+.font-dyslexia .font-logo,
+.font-dyslexia .font-display {
+  letter-spacing: 0.02em;
+}
+
+/* Respect prefers-reduced-motion — disables non-essential animations
+   for users who request reduced motion (vestibular sensitivity, etc.). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

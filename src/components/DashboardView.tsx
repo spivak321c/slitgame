@@ -1,6 +1,9 @@
 import { motion } from 'motion/react';
-import { Trophy, Award, ArrowRight, Play, Users, TrendingUp, Zap, Coins, Gamepad2, Swords } from 'lucide-react';
-import { ScreenType, Achievement, PlayerProfile, levelFromXp, levelTitle } from '../types';
+import { Trophy, Award, ArrowRight, Play, Users, TrendingUp, Zap, Coins, Gamepad2, Swords, Flame, ShoppingBag, BookOpen, Target } from 'lucide-react';
+import { ScreenType, Achievement, PlayerProfile, levelFromXp, levelTitle, StreakInfo, Quest, todayStr } from '../types';
+import MascotBubble from './MascotBubble';
+import ChestCard from './ChestCard';
+import QuestCard from './QuestCard';
 
 const BADGE_ICONS: Record<Achievement['iconType'], typeof Award> = {
   'tile': Award,
@@ -15,26 +18,84 @@ interface DashboardViewProps {
   profile: PlayerProfile;
   achievements: Achievement[];
   activeDuelId: string | null;
+  streak: StreakInfo;
+  dailyChestLastOpened: string | null;
+  onOpenChest: () => void;
+  quests: Quest[];
+  onClaimQuest: (questId: string) => void;
+  equippedMascotItem: string | null;
+  ownedStickerCount: number;
 }
 
-export default function DashboardView({ onNavigate, profile, achievements, activeDuelId }: DashboardViewProps) {
+export default function DashboardView({
+  onNavigate,
+  profile,
+  achievements,
+  activeDuelId,
+  streak,
+  dailyChestLastOpened,
+  onOpenChest,
+  quests,
+  onClaimQuest,
+  equippedMascotItem,
+  ownedStickerCount,
+}: DashboardViewProps) {
   // Find a locked and an unlocked achievement
   const recentBadge = achievements.find(a => a.unlocked) || achievements[1];
   const level = levelFromXp(profile.xp);
   const solvedCount = profile.gamesWon;
+  const today = todayStr();
+  const playedToday = streak.lastPlayedDate === today;
+
+  // Mascot greeting messages — positive, encouraging, contextual
+  const mascotMessage = (() => {
+    if (streak.current >= 7) return `${streak.current}-day streak! You're on fire! 🔥`;
+    if (solvedCount === 0) return 'Hi! I\'m Slit! Ready to solve your first puzzle?';
+    if (playedToday) return 'Great solving today! Come back tomorrow for more!';
+    return 'Welcome back! Let\'s solve some words together!';
+  })();
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 md:py-8">
       {/* Friendly Top Welcome */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-logo font-extrabold text-[#3D342F] tracking-tight">
-            Welcome back, {profile.username}!
-          </h1>
-          <p className="text-[#6F625B] font-display text-sm md:text-base mt-1">
-            Your puzzle workshop is open and warm. Ready for some words?
-          </p>
+        <div className="flex items-end gap-3">
+          <MascotBubble
+            mood={streak.current >= 3 ? 'excited' : 'happy'}
+            message={mascotMessage}
+            level={level.level}
+            equippedItem={equippedMascotItem}
+            compact
+          />
+          <div>
+            <h1 className="text-3xl font-logo font-extrabold text-[#3D342F] tracking-tight">
+              Welcome back, {profile.username}!
+            </h1>
+            <p className="text-[#6F625B] font-display text-sm md:text-base mt-1">
+              Your puzzle workshop is open and warm. Ready for some words?
+            </p>
+          </div>
         </div>
+        {/* Streak flame counter */}
+        {streak.current > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-2 px-4 py-2 bg-[#FDECE7] border border-[#FADCD5] rounded-2xl shrink-0"
+          >
+            <motion.span
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              className="text-2xl"
+            >
+              🔥
+            </motion.span>
+            <div>
+              <div className="font-logo font-black text-lg text-[#F28C6F] leading-none">{streak.current}</div>
+              <div className="text-[10px] text-[#998D85] font-mono">day streak</div>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Grid of Activity Home */}
@@ -146,6 +207,29 @@ export default function DashboardView({ onNavigate, profile, achievements, activ
 
       </div>
 
+      {/* Daily Chest + Quests Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <ChestCard lastOpened={dailyChestLastOpened} onOpen={onOpenChest} />
+
+        {/* Quests summary — spans 2 cols */}
+        <div className="md:col-span-2">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="w-4 h-4 text-[#E45C75]" />
+            <h3 className="font-logo font-extrabold text-sm text-[#3D342F]">Daily Quests</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {quests.map(q => (
+              <QuestCard key={q.id} quest={q} onClaim={onClaimQuest} />
+            ))}
+            {quests.length === 0 && (
+              <div className="col-span-full p-3 bg-[#FAF4EA] border border-dashed border-[#EADFCB] rounded-xl text-center">
+                <p className="text-xs text-[#998D85] font-display">Quests refresh daily — come back tomorrow!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Second Row Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
@@ -247,6 +331,43 @@ export default function DashboardView({ onNavigate, profile, achievements, activ
           </motion.button>
         </motion.div>
 
+      </div>
+
+      {/* Shop + Collection Quick Links */}
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <motion.div
+          whileHover={{ y: -1 }}
+          className="bg-[#FFFCF7] border border-[#E9DCC6] hover:border-[#F2B84B]/50 rounded-[24px] p-4 flex items-center justify-between shadow-[0_2px_12px_-4px_rgba(61,52,47,0.04)] hover:shadow-[0_6px_20px_-4px_rgba(242,184,75,0.12)] transition-all duration-200 cursor-pointer"
+          onClick={() => onNavigate('shop')}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#FFF3D6] border border-[#F2C974] flex items-center justify-center text-[#F2B84B] shrink-0">
+              <ShoppingBag className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-logo font-bold text-sm text-[#3D342F]">Sticker Shop</h4>
+              <p className="text-xs text-[#6F625B] font-display">Spend coins on fun stickers & mascot items!</p>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-[#A69485] shrink-0" />
+        </motion.div>
+
+        <motion.div
+          whileHover={{ y: -1 }}
+          className="bg-[#FFFCF7] border border-[#E9DCC6] hover:border-[#8B72C9]/50 rounded-[24px] p-4 flex items-center justify-between shadow-[0_2px_12px_-4px_rgba(61,52,47,0.04)] hover:shadow-[0_6px_20px_-4px_rgba(139,114,201,0.12)] transition-all duration-200 cursor-pointer"
+          onClick={() => onNavigate('collection')}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#F0ECFA] border border-[#E0D8F5] flex items-center justify-center text-[#8B72C9] shrink-0">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-logo font-bold text-sm text-[#3D342F]">Sticker Book</h4>
+              <p className="text-xs text-[#6F625B] font-display">{ownedStickerCount} stickers collected so far</p>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-[#A69485] shrink-0" />
+        </motion.div>
       </div>
 
       {/* Leaderboards Quick Link */}

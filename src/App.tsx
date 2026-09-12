@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Flame,
@@ -12,9 +12,10 @@ import {
   Volume2,
   VolumeX,
   Gamepad2,
-  PartyPopper,
   User,
-  LogOut
+  LogOut,
+  ShoppingBag,
+  BookOpen,
 } from 'lucide-react';
 
 import {
@@ -24,6 +25,15 @@ import {
   levelTitle,
   Difficulty,
   DIFFICULTIES,
+  DAILY_QUESTS,
+  SHOP_CATALOG,
+  MYSTERY_BOX_ODDS,
+  todayStr,
+  daysBetween,
+  type Quest,
+  type ShopItem,
+  type StickerRarity,
+  type MascotMood,
 } from './types';
 import { useGameStore, useSessionStore } from './store/gameStore';
 import { ensureAnonymousSession } from './lib/supabase';
@@ -38,6 +48,11 @@ import LeaderboardView from './components/LeaderboardView';
 import AchievementsView from './components/AchievementsView';
 import ProfileView from './components/ProfileView';
 import OnboardingView from './components/OnboardingView';
+import ShopView from './components/ShopView';
+import CollectionView from './components/CollectionView';
+import Toast, { type ToastData } from './components/Toast';
+import CoinFly, { type CoinFlyData } from './components/CoinFly';
+import StarBurst, { type StarBurstData } from './components/StarBurst';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('landing');
@@ -52,6 +67,22 @@ export default function App() {
   const setAchievements = useGameStore(s => s.setAchievements);
   const settledDuelIds = useGameStore(s => s.settledDuelIds);
   const markDuelSettled = useGameStore(s => s.markDuelSettled);
+
+  // Phase 3 — gamification state
+  const streak = useGameStore(s => s.streak);
+  const setStreak = useGameStore(s => s.setStreak);
+  const dailyChestLastOpened = useGameStore(s => s.dailyChestLastOpened);
+  const setDailyChestOpened = useGameStore(s => s.setDailyChestOpened);
+  const quests = useGameStore(s => s.quests);
+  const setQuests = useGameStore(s => s.setQuests);
+  const questsDate = useGameStore(s => s.questsDate);
+  const setQuestsDate = useGameStore(s => s.setQuestsDate);
+  const ownedStickers = useGameStore(s => s.ownedStickers);
+  const addOwnedSticker = useGameStore(s => s.addOwnedSticker);
+  const equippedMascotItem = useGameStore(s => s.equippedMascotItem);
+  const setEquippedMascotItem = useGameStore(s => s.setEquippedMascotItem);
+  const dyslexiaFont = useGameStore(s => s.dyslexiaFont);
+  const toggleDyslexiaFont = useGameStore(s => s.toggleDyslexiaFont);
 
   // Anonymous backend session for duels (Phase 1). Resolves to local-only
   // mode (playerId null) when Supabase isn't configured or offline.
@@ -94,18 +125,37 @@ export default function App() {
     if (nextState) sound.playKeyPress();
   };
 
-  // Floating celebration elements
-  const [celebrationStars, setCelebrationStars] = useState<Array<{ id: number; x: number; y: number }>>([]);
+  // ── Phase 3: Daily quest generation ────────────────────────────────
+  // On app load, check if quests need to be regenerated (new day).
+  useEffect(() => {
+    const today = todayStr();
+    if (questsDate !== today) {
+      const freshQuests: Quest[] = DAILY_QUESTS.map(q => ({
+        ...q,
+        progress: 0,
+        claimed: false,
+      }));
+      setQuests(freshQuests);
+      setQuestsDate(today);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const triggerCelebration = () => {
-    const stars = Array.from({ length: 12 }).map(() => ({
-      id: Math.random(),
-      x: 20 + Math.random() * 60,
-      y: 10 + Math.random() * 50,
-    }));
-    setCelebrationStars(stars);
-    setTimeout(() => setCelebrationStars([]), 2500);
-  };
+  // Floating celebration elements (Phase 3 — StarBurst replaces inline stars)
+  const [starBurst, setStarBurst] = useState<StarBurstData | null>(null);
+  const [coinFly, setCoinFly] = useState<CoinFlyData | null>(null);
+  const [toast, setToast] = useState<ToastData | null>(null);
+
+  const triggerStarBurst = useCallback((count?: number) => {
+    setStarBurst({ id: Date.now(), count });
+  }, []);
+
+  const showToast = useCallback((message: string, icon: ToastData['icon'] = 'info', color: ToastData['color'] = 'honey') => {
+    setToast({ id: Date.now(), message, icon, color });
+  }, []);
+
+  const triggerCoinFly = useCallback((amount: number) => {
+    setCoinFly({ id: Date.now(), amount, fromX: 50, fromY: 50 });
+  }, []);
 
   // ── Coin helpers ────────────────────────────────────────────────────
   const addCoins = (amount: number, desc: string) => {
@@ -125,7 +175,7 @@ export default function App() {
       if (after.level > before.level) {
         setTimeout(() => {
           sound.playRewardSound();
-          triggerCelebration();
+          triggerStarBurst();
           setLevelUpToast(`Level ${after.level} · ${levelTitle(after.level)}`);
         }, 50);
       }
@@ -151,12 +201,104 @@ export default function App() {
     );
     if (unlockedAny) {
       sound.playRewardSound();
-      triggerCelebration();
+      triggerStarBurst();
     }
   };
 
+  // ── Phase 3: Streak update ──────────────────────────────────────────
+  const updateStreak = useCallback(() => {
+    const today = todayStr();
+    setStreak(prev => {
+      if (prev.lastPlayedDate === today) return prev; // already counted today
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+      const continued = prev.lastPlayedDate === yStr;
+      const current = continued ? prev.current + 1 : 1;
+      return {
+        current,
+        longest: Math.max(prev.longest, current),
+        lastPlayedDate: today,
+      };
+    });
+  }, [setStreak]);
+
+  // ── Phase 3: Quest tracking ────────────────────────────────────────
+  const trackQuestProgress = useCallback((questId: string, amount: number) => {
+    setQuests(prev => prev.map(q =>
+      q.id === questId && !q.claimed
+        ? { ...q, progress: Math.min(q.goal, q.progress + amount) }
+        : q
+    ));
+  }, [setQuests]);
+
+  const claimQuest = useCallback((questId: string) => {
+    const quest = quests.find(q => q.id === questId);
+    if (!quest || quest.claimed || quest.progress < quest.goal) return;
+    setQuests(prev => prev.map(q =>
+      q.id === questId ? { ...q, claimed: true } : q
+    ));
+    addCoins(quest.reward, `Quest: ${quest.title}`);
+    sound.playRewardSound();
+    triggerStarBurst(6);
+    showToast(`Quest complete! +${quest.reward} coins`, 'check', 'leaf');
+  }, [quests, setQuests]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Phase 3: Daily chest ───────────────────────────────────────────
+  const openChest = useCallback(() => {
+    const now = new Date().toISOString();
+    const reward = 20 + Math.floor(Math.random() * 31); // 20-50 coins
+    addCoins(reward, 'Daily chest reward');
+    sound.playRewardSound();
+    triggerStarBurst(10);
+    triggerCoinFly(reward);
+    setDailyChestOpened(now);
+    showToast(`Daily chest! +${reward} coins!`, 'coins', 'honey');
+  }, [setDailyChestOpened]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Phase 3: Shop ──────────────────────────────────────────────────
+  const buyShopItem = useCallback((item: ShopItem) => {
+    if (profile.coins < item.price) return;
+    if (ownedStickers.includes(item.id)) return;
+    setProfile(prev => ({ ...prev, coins: prev.coins - item.price }));
+    setCoinHistory(prev => [
+      { desc: `Bought ${item.name}`, amount: `-${item.price}`, type: 'minus' as const, time: 'Just now' },
+      ...prev,
+    ].slice(0, 50));
+    addOwnedSticker(item.id);
+    sound.playRewardSound();
+    showToast(`Got ${item.name}! ${item.emoji}`, 'achievement', 'grape');
+  }, [profile.coins, ownedStickers, setProfile, setCoinHistory, addOwnedSticker]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const buyMysteryBox = useCallback(() => {
+    if (profile.coins < 50) return;
+    // Roll for rarity using disclosed odds
+    const roll = Math.random();
+    let cum = 0;
+    let rarity: StickerRarity = 'common';
+    for (const odd of MYSTERY_BOX_ODDS) {
+      cum += odd.chance;
+      if (roll < cum) { rarity = odd.rarity; break; }
+    }
+    // Pick an unowned sticker of that rarity
+    const pool = SHOP_CATALOG.filter(i => i.rarity === rarity && i.type === 'sticker' && !ownedStickers.includes(i.id));
+    const pool2 = SHOP_CATALOG.filter(i => i.rarity === rarity && i.type === 'sticker');
+    const pickFrom = pool.length > 0 ? pool : pool2; // fallback if all owned
+    const won = pickFrom[Math.floor(Math.random() * pickFrom.length)] ?? SHOP_CATALOG[0];
+
+    setProfile(prev => ({ ...prev, coins: prev.coins - 50 }));
+    setCoinHistory(prev => [
+      { desc: 'Mystery Box', amount: '-50', type: 'minus' as const, time: 'Just now' },
+      ...prev,
+    ].slice(0, 50));
+    addOwnedSticker(won.id);
+    sound.playRewardSound();
+    triggerStarBurst(14);
+    showToast(`You got ${won.name}! ${won.emoji}`, 'achievement', rarity === 'legendary' ? 'honey' : 'grape');
+  }, [profile.coins, ownedStickers, setProfile, setCoinHistory, addOwnedSticker]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Puzzle solve callback ───────────────────────────────────────────
-  const handleSolvePuzzle = (attempts: number, difficulty: Difficulty, won: boolean) => {
+  const handleSolvePuzzle = (attempts: number, difficulty: Difficulty, won: boolean, guesses?: string[]) => {
     const cfg = DIFFICULTIES.find(d => d.id === difficulty)!;
 
     setProfile(prev => ({
@@ -172,13 +314,24 @@ export default function App() {
       },
     }));
 
+    // Phase 3: streak + quest tracking
+    if (won) {
+      updateStreak();
+      trackQuestProgress('solve-2', 1);
+    }
+    // Count vowels for the vowel quest
+    if (guesses && guesses.length > 0) {
+      const vowelCount = guesses.join('').match(/[AEIOU]/gi)?.length ?? 0;
+      if (vowelCount > 0) trackQuestProgress('use-vowels', vowelCount);
+    }
+
     if (won) {
       const bonus = Math.max(0, cfg.attempts - attempts) * 2;
-      addCoins(cfg.baseReward + bonus, `Solved ${cfg.label} puzzle`);
+      const totalReward = cfg.baseReward + bonus;
+      addCoins(totalReward, `Solved ${cfg.label} puzzle`);
       addXp(cfg.xpReward);
-      // Confetti stars on every solve — previously only level-ups,
-      // achievement unlocks, and the coin faucet celebrated.
-      triggerCelebration();
+      triggerStarBurst();
+      triggerCoinFly(totalReward);
       handleUnlockAchievement('first-win');
       if (attempts <= 3) handleUnlockAchievement('solve-3');
     } else {
@@ -210,7 +363,12 @@ export default function App() {
         : 'Duel consolation coins';
       addCoins(outcome.rewards.coins, label);
       addXp(outcome.rewards.xp);
-      if (outcome.won) handleUnlockAchievement('duel-win');
+      if (outcome.won) {
+        handleUnlockAchievement('duel-win');
+        trackQuestProgress('win-duel', 1);
+        triggerStarBurst();
+        triggerCoinFly(outcome.rewards.coins);
+      }
     }
 
     // Reconcile with the server — replaces coins/xp/duels_* with the
@@ -249,7 +407,7 @@ export default function App() {
   // + fun name and flips hasOnboarded so the gate never shows again.
   const handleOnboardingComplete = (username: string, avatar: string) => {
     sound.playRewardSound();
-    triggerCelebration();
+    triggerStarBurst();
     setProfile(prev => ({
       ...prev,
       hasOnboarded: true,
@@ -260,7 +418,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF9F0] text-[#3D342F] font-body selection:bg-[#FFF3D6] relative flex flex-col justify-between">
+    <div className={`min-h-screen bg-[#FFF9F0] text-[#3D342F] font-body selection:bg-[#FFF3D6] relative flex flex-col justify-between ${dyslexiaFont ? 'font-dyslexia' : ''}`}>
 
       {/* 1. TOP GLOBAL APP HEADER */}
       <header className="sticky top-0 z-40 bg-[#FFFCF7]/95 backdrop-blur-md border-b-2 border-[#E7DCCB] px-2.5 sm:px-4 py-2 sm:py-3 shadow-[0_2px_12px_rgba(61,52,47,0.02)]">
@@ -288,6 +446,7 @@ export default function App() {
                   { id: 'dashboard' as ScreenType, label: 'Workshop', icon: Compass, color: 'text-[#E45C75]' },
                   { id: 'play' as ScreenType, label: 'Play', icon: Gamepad2, color: 'text-[#F2B84B]' },
                   { id: 'duel' as ScreenType, label: 'Duels', icon: Users, color: 'text-[#F28C6F]' },
+                  { id: 'shop' as ScreenType, label: 'Shop', icon: ShoppingBag, color: 'text-[#D4960F]' },
                   { id: 'leaderboard' as ScreenType, label: 'Rankings', icon: Trophy, color: 'text-[#65B9E8]' },
                   { id: 'achievements' as ScreenType, label: 'Badges', icon: Award, color: 'text-[#8B72C9]' },
                   { id: 'profile' as ScreenType, label: 'Profile', icon: User, color: 'text-[#79B96B]' },
@@ -363,30 +522,10 @@ export default function App() {
         </div>
       </header>
 
-      {/* 2. FLOATING STAR STICKER CELEBRATION EFFECT */}
-      <AnimatePresence>
-        {celebrationStars.length > 0 && (
-          <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
-            {celebrationStars.map(star => (
-              <motion.div
-                key={star.id}
-                className="absolute text-3xl select-none"
-                style={{ left: `${star.x}%`, top: `${star.y}%` }}
-                initial={{ opacity: 0, scale: 0.1, y: 30, rotate: 0 }}
-                animate={{
-                  opacity: [0, 1, 1, 0],
-                  scale: [0.2, 1.2, 1, 0.4],
-                  y: -50,
-                  rotate: [0, 15, -15, 30],
-                }}
-                transition={{ duration: 2.2, ease: [0.34, 1.56, 0.64, 1] }}
-              >
-                <PartyPopper className="w-7 h-7 text-[#E45C75]" />
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </AnimatePresence>
+      {/* 2. PHASE 3 CELEBRATION OVERLAYS — StarBurst, CoinFly, Toast */}
+      <StarBurst data={starBurst} onDone={() => setStarBurst(null)} />
+      <CoinFly data={coinFly} onDone={() => setCoinFly(null)} />
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
 
       {/* Level-up toast */}
       <AnimatePresence>
@@ -440,6 +579,13 @@ export default function App() {
                 profile={profile}
                 achievements={achievements}
                 activeDuelId={activeDuelId}
+                streak={streak}
+                dailyChestLastOpened={dailyChestLastOpened}
+                onOpenChest={openChest}
+                quests={quests}
+                onClaimQuest={claimQuest}
+                equippedMascotItem={equippedMascotItem}
+                ownedStickerCount={ownedStickers.length}
               />
             )}
 
@@ -480,6 +626,28 @@ export default function App() {
                 achievements={achievements}
                 onUpdateProfile={updateProfile}
                 onOpenPouch={() => setPouchOpen(true)}
+                dyslexiaFont={dyslexiaFont}
+                onToggleDyslexiaFont={toggleDyslexiaFont}
+                equippedMascotItem={equippedMascotItem}
+                onSetEquippedMascotItem={setEquippedMascotItem}
+                ownedStickers={ownedStickers}
+              />
+            )}
+
+            {currentScreen === 'shop' && (
+              <ShopView
+                onNavigate={setCurrentScreen}
+                profile={profile}
+                ownedStickers={ownedStickers}
+                onBuy={buyShopItem}
+                onBuyMysteryBox={buyMysteryBox}
+              />
+            )}
+
+            {currentScreen === 'collection' && (
+              <CollectionView
+                onNavigate={setCurrentScreen}
+                ownedStickers={ownedStickers}
               />
             )}
               </>
@@ -642,7 +810,7 @@ export default function App() {
                   onClick={() => {
                     addCoins(25, 'Free coin bonus');
                     sound.playRewardSound();
-                    triggerCelebration();
+                    triggerStarBurst();
                     checkMilestoneAchievements();
                   }}
                   whileTap={{ scale: 0.96 }}

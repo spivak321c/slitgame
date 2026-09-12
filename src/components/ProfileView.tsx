@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Check, Link2, Pencil, Lock, CheckCircle2, Coins, Gamepad2, Swords, Award, Zap, Shield, Star, Trophy } from 'lucide-react';
-import { ScreenType, Achievement, PlayerProfile, levelFromXp, levelTitle, DIFFICULTIES } from '../types';
+import { ScreenType, Achievement, PlayerProfile, levelFromXp, levelTitle, DIFFICULTIES, SHOP_CATALOG } from '../types';
 import { sound } from '../utils/audio';
 
 interface ProfileViewProps {
@@ -10,6 +10,11 @@ interface ProfileViewProps {
   achievements: Achievement[];
   onUpdateProfile: (patch: Partial<PlayerProfile>) => void;
   onOpenPouch: () => void;
+  dyslexiaFont: boolean;
+  onToggleDyslexiaFont: () => void;
+  equippedMascotItem: string | null;
+  onSetEquippedMascotItem: (id: string | null) => void;
+  ownedStickers: string[];
 }
 
 const BADGE_ICONS: Record<Achievement['iconType'], typeof Award> = {
@@ -28,6 +33,11 @@ export default function ProfileView({
   achievements,
   onUpdateProfile,
   onOpenPouch,
+  dyslexiaFont,
+  onToggleDyslexiaFont,
+  equippedMascotItem,
+  onSetEquippedMascotItem,
+  ownedStickers,
 }: ProfileViewProps) {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(profile.username);
@@ -350,6 +360,71 @@ export default function ProfileView({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Settings & Accessibility (Phase 3) */}
+      <div className="bg-[#FFFCF7] border-2 border-[#E7DCCB] rounded-[24px] p-5 sm:p-6 shadow-raised space-y-4">
+        <h3 className="font-logo font-extrabold text-sm text-[#3D342F]">Settings</h3>
+
+        {/* Dyslexia-friendly font toggle */}
+        <div className="flex items-center justify-between bg-[#FAF4EA] border border-[#EADFCB] rounded-2xl px-4 py-3">
+          <div>
+            <div className="font-display font-bold text-xs text-[#3D342F]">Easier Reading</div>
+            <div className="text-[10px] text-[#998D85] font-mono">More spacing between letters & lines</div>
+          </div>
+          <button
+            onClick={onToggleDyslexiaFont}
+            className={`relative w-12 h-7 rounded-full transition-colors cursor-pointer ${
+              dyslexiaFont ? 'bg-[#79B96B]' : 'bg-[#EADFCB]'
+            }`}
+            aria-label="Toggle easier reading mode"
+            aria-pressed={dyslexiaFont}
+          >
+            <motion.div
+              layout
+              transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+              className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm ${dyslexiaFont ? 'left-[26px]' : 'left-0.5'}`}
+            />
+          </button>
+        </div>
+
+        {/* Mascot cosmetics */}
+        {(() => {
+          const mascotItems = SHOP_CATALOG.filter(i => i.type === 'mascot' && ownedStickers.includes(i.id));
+          if (mascotItems.length === 0) return null;
+          return (
+            <div>
+              <div className="font-display font-bold text-xs text-[#3D342F] mb-2">Slit's Accessories</div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => onSetEquippedMascotItem(null)}
+                  className={`px-3 py-2 rounded-xl text-xs font-display font-bold border-2 transition-all cursor-pointer ${
+                    !equippedMascotItem
+                      ? 'bg-[#F0ECFA] border-[#8B72C9] text-[#7155B5]'
+                      : 'bg-[#FAF4EA] border-[#EADFCB] text-[#998D85]'
+                  }`}
+                >
+                  None
+                </button>
+                {mascotItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => onSetEquippedMascotItem(item.id)}
+                    className={`px-3 py-2 rounded-xl text-lg border-2 transition-all cursor-pointer ${
+                      equippedMascotItem === item.id
+                        ? 'bg-[#F0ECFA] border-[#8B72C9]'
+                        : 'bg-[#FAF4EA] border-[#EADFCB]'
+                    }`}
+                    title={item.name}
+                    aria-label={`Equip ${item.name}`}
+                  >
+                    {item.emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

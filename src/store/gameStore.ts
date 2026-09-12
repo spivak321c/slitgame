@@ -3,6 +3,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import {
   type PlayerProfile,
   type Achievement,
+  type StreakInfo,
+  type Quest,
   INITIAL_ACHIEVEMENTS,
 } from '../types';
 
@@ -32,6 +34,12 @@ export const DEFAULT_PROFILE: PlayerProfile = {
   hasOnboarded: false,
 };
 
+export const DEFAULT_STREAK: StreakInfo = {
+  current: 0,
+  longest: 0,
+  lastPlayedDate: null,
+};
+
 export interface CoinLogEntry {
   desc: string;
   amount: string;
@@ -56,12 +64,27 @@ interface GameStoreState {
   /** Phase 2 — ids of duels whose payout has been applied locally, so a
    *  refresh on the result screen can't re-award (idempotency). */
   settledDuelIds: string[];
+  // Phase 3 — gamification state
+  streak: StreakInfo;
+  dailyChestLastOpened: string | null;
+  quests: Quest[];
+  questsDate: string | null;
+  ownedStickers: string[];
+  equippedMascotItem: string | null;
+  dyslexiaFont: boolean;
   setProfile: (updater: Updater<PlayerProfile>) => void;
   setCoinHistory: (updater: Updater<CoinLogEntry[]>) => void;
   setAchievements: (updater: Updater<Achievement[]>) => void;
   setActiveDuel: (duelId: string | null) => void;
   markDuelSettled: (duelId: string) => void;
   resetSettledDuels: () => void;
+  setStreak: (updater: Updater<StreakInfo>) => void;
+  setDailyChestOpened: (date: string) => void;
+  setQuests: (updater: Updater<Quest[]>) => void;
+  setQuestsDate: (date: string) => void;
+  addOwnedSticker: (id: string) => void;
+  setEquippedMascotItem: (id: string | null) => void;
+  toggleDyslexiaFont: () => void;
 }
 
 export const useGameStore = create<GameStoreState>()(
@@ -72,6 +95,13 @@ export const useGameStore = create<GameStoreState>()(
       achievements: INITIAL_ACHIEVEMENTS,
       activeDuelId: null,
       settledDuelIds: [],
+      streak: DEFAULT_STREAK,
+      dailyChestLastOpened: null,
+      quests: [],
+      questsDate: null,
+      ownedStickers: [],
+      equippedMascotItem: null,
+      dyslexiaFont: false,
       setProfile: (updater) =>
         set((s) => ({ profile: resolve(updater, s.profile) })),
       setCoinHistory: (updater) =>
@@ -88,6 +118,21 @@ export const useGameStore = create<GameStoreState>()(
             : { settledDuelIds: [...s.settledDuelIds, duelId].slice(-MAX_COIN_LOG) }
         ),
       resetSettledDuels: () => set({ settledDuelIds: [] }),
+      setStreak: (updater) =>
+        set((s) => ({ streak: resolve(updater, s.streak) })),
+      setDailyChestOpened: (date) => set({ dailyChestLastOpened: date }),
+      setQuests: (updater) =>
+        set((s) => ({ quests: resolve(updater, s.quests) })),
+      setQuestsDate: (date) => set({ questsDate: date }),
+      addOwnedSticker: (id) =>
+        set((s) =>
+          s.ownedStickers.includes(id)
+            ? s
+            : { ownedStickers: [...s.ownedStickers, id] }
+        ),
+      setEquippedMascotItem: (id) => set({ equippedMascotItem: id }),
+      toggleDyslexiaFont: () =>
+        set((s) => ({ dyslexiaFont: !s.dyslexiaFont })),
     }),
     {
       name: 'slotword-save-v1',
@@ -100,6 +145,13 @@ export const useGameStore = create<GameStoreState>()(
         achievements: s.achievements,
         activeDuelId: s.activeDuelId,
         settledDuelIds: s.settledDuelIds,
+        streak: s.streak,
+        dailyChestLastOpened: s.dailyChestLastOpened,
+        quests: s.quests,
+        questsDate: s.questsDate,
+        ownedStickers: s.ownedStickers,
+        equippedMascotItem: s.equippedMascotItem,
+        dyslexiaFont: s.dyslexiaFont,
       }),
       // Achievement catalog always comes from code (so newly shipped
       // achievements appear for returning players); only unlock state is
@@ -124,6 +176,15 @@ export const useGameStore = create<GameStoreState>()(
                     savedProfile.duelsPlayed > 0),
               }
             : current.profile,
+          // Phase 3 forward-compat: fill defaults for new fields if the
+          // saved state predates the gamification layer.
+          streak: saved.streak ?? current.streak,
+          dailyChestLastOpened: saved.dailyChestLastOpened ?? null,
+          quests: saved.quests ?? [],
+          questsDate: saved.questsDate ?? null,
+          ownedStickers: saved.ownedStickers ?? [],
+          equippedMascotItem: saved.equippedMascotItem ?? null,
+          dyslexiaFont: saved.dyslexiaFont ?? false,
           achievements: current.achievements.map((a) => {
             const match = savedAchievements.find((s) => s.id === a.id);
             return match
