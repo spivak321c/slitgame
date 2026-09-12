@@ -110,31 +110,6 @@ export interface GameState {
   difficulty: Difficulty;
 }
 
-export interface Opponent {
-  id: string;
-  name: string;
-  level: string;
-  avatar: string;
-  accuracy: number; // 0-1
-  speedSeconds: number;
-}
-
-export interface DuelSession {
-  id: string;
-  opponent: Opponent;
-  entryFee: number; // in coins
-  prizePool: number; // in coins
-  playerGuesses: string[];
-  opponentGuesses: string[];
-  playerCurrentGuess: string;
-  opponentCurrentGuess: string;
-  playerStatus: 'playing' | 'won' | 'lost';
-  opponentStatus: 'playing' | 'won' | 'lost';
-  word: string;
-  wordLength: number;
-  step: 'setup' | 'finished';
-}
-
 export interface Achievement {
   id: string;
   title: string;
@@ -177,33 +152,6 @@ export function randomWord(length: number): string {
   const bank = wordsForLength(length);
   return bank[Math.floor(Math.random() * bank.length)];
 }
-
-export const OPPONENTS: Opponent[] = [
-  {
-    id: 'gary',
-    name: 'Guesser Gary',
-    level: 'Letter Learner',
-    avatar: '🦊',
-    accuracy: 0.65,
-    speedSeconds: 150,
-  },
-  {
-    id: 'clara',
-    name: 'Clara Cleanwood',
-    level: 'Word Explorer',
-    avatar: '🦉',
-    accuracy: 0.78,
-    speedSeconds: 120,
-  },
-  {
-    id: 'wendy',
-    name: 'Wordsmith Wendy',
-    level: 'Pattern Finder',
-    avatar: '🐨',
-    accuracy: 0.90,
-    speedSeconds: 90,
-  },
-];
 
 export const INITIAL_ACHIEVEMENTS: Achievement[] = [
   {

@@ -1,6 +1,6 @@
-import { Star, ArrowLeft, Medal, Coins, Trophy, Gamepad2, Swords } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Star, ArrowLeft, Medal, Coins, Trophy, Gamepad2, Swords, Users } from 'lucide-react';
 import { ScreenType, PlayerProfile, levelFromXp, levelTitle } from '../types';
-import RivalsStrip from './RivalsStrip';
 
 interface LeaderboardViewProps {
   onNavigate: (screen: ScreenType) => void;
@@ -35,9 +35,26 @@ export default function LeaderboardView({ onNavigate, profile }: LeaderboardView
         </p>
       </div>
 
-      <div className="bg-[#FFFCF7] border border-[#E7DCCB] rounded-2xl p-4 mb-6 shadow-card">
-        <RivalsStrip onDuel={() => onNavigate('duel')} />
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-[#FFFCF7] border border-[#E7DCCB] rounded-2xl p-4 mb-6 shadow-card flex items-center gap-3"
+      >
+        <div className="w-10 h-10 rounded-xl bg-[#FDECE7] border border-[#FADCD5] grid place-items-center shrink-0">
+          <Users className="w-5 h-5 text-[#F28C6F]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-display font-bold text-[#3D342F]">Challenge a friend</p>
+          <p className="text-xs text-[#6F625B] leading-relaxed">Share a room code and duel a real player 1-on-1. No bots, just fun.</p>
+        </div>
+        <motion.button
+          onClick={() => onNavigate('duel')}
+          whileTap={{ scale: 0.94 }}
+          className="px-4 py-2 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_2px_0_#AF324B] transition-all cursor-pointer whitespace-nowrap"
+        >
+          New duel
+        </motion.button>
+      </motion.div>
 
       <div className="bg-[#FFFCF7] border border-[#E7DCCB] rounded-2xl overflow-hidden shadow-card p-2 mb-8">
         {hasPlayed ? (
@@ -98,7 +115,7 @@ export default function LeaderboardView({ onNavigate, profile }: LeaderboardView
         </h3>
         <ul className="list-disc pl-4 space-y-1">
           <li>Rankings are sorted by coins in each solver's pouch.</li>
-          <li>Win match duels to double your stake and jump up the board.</li>
+          <li>Win live duels against friends to earn coins and jump up the board.</li>
           <li>Every solve and duel also earns XP toward your level title.</li>
           <li>Coins are purely for fun — no real money involved, ever.</li>
         </ul>

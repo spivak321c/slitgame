@@ -98,7 +98,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           variants={itemVariants}
           className="text-base md:text-lg text-[#6F625B] font-display font-medium leading-relaxed max-w-lg"
         >
-          Warm, friendly word puzzles for every mood — quick 4-letter rounds or grand 6-letter battles. Earn coins and XP, then put them on the line in match duels.
+          Warm, friendly word puzzles for every mood — quick 4-letter rounds or grand 6-letter battles. Earn coins and XP in solo rounds, then challenge a friend to a live match duel.
         </motion.p>
       </div>
 
@@ -132,7 +132,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         variants={itemVariants}
         className="flex items-center gap-2.5 px-5 py-2.5 bg-[#FAF7F2] border border-[#EADBCC]/60 rounded-full text-xs text-[#5C524D] font-display font-semibold mb-16 shadow-[0_2px_12px_-4px_rgba(61,52,47,0.06)]"
       >
-        <span>Coins are purely for fun — earn them solving puzzles, spend them in duels.</span>
+        <span>Coins are purely for fun — earn them solving puzzles and winning duels.</span>
       </motion.div>
 
       <motion.div

@@ -50,9 +50,12 @@ interface GameStoreState {
   profile: PlayerProfile;
   coinHistory: CoinLogEntry[];
   achievements: Achievement[];
+  /** Duel currently being played / awaited — survives refresh (Phase 1). */
+  activeDuelId: string | null;
   setProfile: (updater: Updater<PlayerProfile>) => void;
   setCoinHistory: (updater: Updater<CoinLogEntry[]>) => void;
   setAchievements: (updater: Updater<Achievement[]>) => void;
+  setActiveDuel: (duelId: string | null) => void;
 }
 
 export const useGameStore = create<GameStoreState>()(
@@ -61,6 +64,7 @@ export const useGameStore = create<GameStoreState>()(
       profile: DEFAULT_PROFILE,
       coinHistory: [],
       achievements: INITIAL_ACHIEVEMENTS,
+      activeDuelId: null,
       setProfile: (updater) =>
         set((s) => ({ profile: resolve(updater, s.profile) })),
       setCoinHistory: (updater) =>
@@ -69,6 +73,7 @@ export const useGameStore = create<GameStoreState>()(
         })),
       setAchievements: (updater) =>
         set((s) => ({ achievements: resolve(updater, s.achievements) })),
+      setActiveDuel: (duelId) => set({ activeDuelId: duelId }),
     }),
     {
       name: 'slotword-save-v1',
@@ -79,6 +84,7 @@ export const useGameStore = create<GameStoreState>()(
         profile: s.profile,
         coinHistory: s.coinHistory,
         achievements: s.achievements,
+        activeDuelId: s.activeDuelId,
       }),
       // Achievement catalog always comes from code (so newly shipped
       // achievements appear for returning players); only unlock state is

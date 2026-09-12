@@ -1,8 +1,6 @@
 import { motion } from 'motion/react';
 import { Trophy, Award, ArrowRight, Play, Users, TrendingUp, Zap, Coins, Gamepad2, Swords } from 'lucide-react';
 import { ScreenType, Achievement, PlayerProfile, levelFromXp, levelTitle } from '../types';
-import RivalsStrip from './RivalsStrip';
-import { DuelRoom } from '../data/duelRooms';
 
 const BADGE_ICONS: Record<Achievement['iconType'], typeof Award> = {
   'tile': Award,
@@ -16,12 +14,10 @@ interface DashboardViewProps {
   onNavigate: (screen: ScreenType) => void;
   profile: PlayerProfile;
   achievements: Achievement[];
-  openRooms: DuelRoom[];
-  waitingRooms: number;
-  onJoinRoom: (room: DuelRoom) => void;
+  activeDuelId: string | null;
 }
 
-export default function DashboardView({ onNavigate, profile, achievements, openRooms, waitingRooms, onJoinRoom }: DashboardViewProps) {
+export default function DashboardView({ onNavigate, profile, achievements, activeDuelId }: DashboardViewProps) {
   // Find a locked and an unlocked achievement
   const recentBadge = achievements.find(a => a.unlocked) || achievements[1];
   const level = levelFromXp(profile.xp);
@@ -153,7 +149,7 @@ export default function DashboardView({ onNavigate, profile, achievements, openR
       {/* Second Row Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* Duel Match Arena Banner */} 
+        {/* Duel Match Arena Banner */}
         <motion.div
           className="bg-[#FFFCF7] border border-[#E9DCC6] hover:border-[#F28C6F]/50 rounded-[28px] p-6 shadow-[0_4px_20px_-4px_rgba(61,52,47,0.04)] hover:shadow-[0_8px_30px_-6px_rgba(242,140,111,0.12)] transition-all duration-200 flex flex-col justify-between group"
           whileHover={{ y: -2 }}
@@ -163,54 +159,32 @@ export default function DashboardView({ onNavigate, profile, achievements, openR
               <div className="w-8.5 h-8.5 rounded-xl bg-[#FDECE7] border border-[#FADCD5] flex items-center justify-center text-[#F28C6F]">
                 <Users className="w-4.5 h-4.5 text-[#F28C6F]" />
               </div>
-              <h3 className="text-xl font-logo font-extrabold text-[#3D342F]">Duel Matches</h3>
-              {waitingRooms > 0 ? (
+              <h3 className="text-xl font-logo font-extrabold text-[#3D342F]">Duel a Friend</h3>
+              {activeDuelId && (
                 <span className="ml-auto flex items-center gap-1.5 font-mono text-[11px] font-semibold text-[#428033] bg-[#EAF5E7] border border-[#BFE3C9] px-2.5 py-1 rounded-full">
-                  <Swords className="w-3 h-3" />
-                  {waitingRooms} {waitingRooms === 1 ? 'room' : 'rooms'} waiting
+                  <span className="w-2 h-2 rounded-full bg-[#79B96B] animate-pulse" />
+                  Duel live
                 </span>
-              ) : null}
+              )}
             </div>
 
             <p className="text-sm text-[#6F625B] font-display leading-relaxed mb-5">
-              Step into a head-to-head match against a clever practice rival. Winner takes the coin prize pool — the pot grows bigger as you risk more. Live opponents arrive with the upcoming backend.
+              Challenge a friend to the same secret word — share a 6-letter code and race live.
+              Real players only, no bots! First to solve wins the coin pot.
             </p>
 
-            {openRooms.length > 0 ? (
-              <div className="flex flex-col gap-2 mb-5">
-                {openRooms.map(room => (
-                  <div
-                    key={room.id}
-                    className="flex items-center justify-between gap-3 bg-white border border-[#E7DCCB] rounded-2xl px-3.5 py-2.5"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-9 h-9 rounded-xl bg-[#FAF4EA] border border-[#EADFCB] grid place-items-center text-lg shrink-0">
-                        {room.host.avatar}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="font-mono text-[11px] font-semibold text-[#4E433C] truncate">
-                          <span className="inline-flex items-center gap-1">{room.stake}<Coins className="w-3 h-3 text-[#F2B84B]" /></span> stake · {room.minutes} min
-                        </div>
-                        <div className="text-[10.5px] text-[#998D85] truncate">
-                          {room.handle} · {room.slices}/{room.sliceTotal} slices
-                        </div>
-                      </div>
-                    </div>
-                    <motion.button
-                      onClick={() => onJoinRoom(room)}
-                      whileTap={{ scale: 0.94 }}
-                      className="px-4 py-1.5 bg-[#FDECE7] hover:bg-[#FCD8CD] border border-[#FADCD5] text-[#D96B4C] font-display font-extrabold text-[11px] rounded-full transition-colors whitespace-nowrap cursor-pointer"
-                    >
-                      Join
-                    </motion.button>
-                  </div>
-                ))}
+            {activeDuelId ? (
+              <div className="flex items-center gap-3 mb-5 p-3.5 bg-[#EAF5E7] border border-[#BFE3C9] rounded-2xl">
+                <Swords className="w-5 h-5 text-[#428033] shrink-0" />
+                <p className="text-xs text-[#3D342F] font-display font-bold flex-1">
+                  You have a duel waiting — jump back in!
+                </p>
               </div>
             ) : (
               <div className="flex items-center gap-3 mb-5 p-3.5 bg-[#FAF4EA] border border-dashed border-[#DCCFB8] rounded-2xl">
                 <Swords className="w-5 h-5 text-[#A69485] shrink-0" />
                 <p className="text-xs text-[#6F625B] font-display">
-                  No open staked rooms right now. Pick a rival below to start your own, or open the Duel Arena.
+                  No duel running. Create one and send the code to a friend!
                 </p>
               </div>
             )}
@@ -221,7 +195,7 @@ export default function DashboardView({ onNavigate, profile, achievements, openR
             whileTap={{ scale: 0.96 }}
             className="w-full py-3 bg-[#FDECE7] hover:bg-[#FCD8CD] border border-[#FADCD5] text-[#D96B4C] font-display font-extrabold text-sm rounded-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer group-hover:shadow-xs"
           >
-            Enter Match Rooms
+            {activeDuelId ? 'Return to Your Duel' : 'Enter Duel Arena'}
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </motion.button>
         </motion.div>
@@ -274,14 +248,6 @@ export default function DashboardView({ onNavigate, profile, achievements, openR
         </motion.div>
 
       </div>
-
-      {/* Active Word Rivals Strip */}
-      <motion.div
-        className="mt-6 p-4 sm:p-5 bg-[#FFFCF7] border border-[#E9DCC6] hover:border-[#F28C6F]/50 rounded-[24px] shadow-[0_2px_12px_-4px_rgba(61,52,47,0.04)] hover:shadow-[0_6px_20px_-4px_rgba(242,140,111,0.12)] transition-all duration-200"
-        whileHover={{ y: -1 }}
-      >
-        <RivalsStrip onDuel={() => onNavigate('duel')} />
-      </motion.div>
 
       {/* Leaderboards Quick Link */}
       <motion.div

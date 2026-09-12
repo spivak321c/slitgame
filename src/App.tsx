@@ -27,8 +27,8 @@ import {
 } from './types';
 import { useGameStore, useSessionStore } from './store/gameStore';
 import { ensureAnonymousSession } from './lib/supabase';
+import type { DuelOutcome } from './lib/duelTypes';
 import { sound } from './utils/audio';
-import { DuelRoom, OPEN_DUEL_ROOMS, waitingRoomCount } from './data/duelRooms';
 import LandingPage from './components/LandingPage';
 import DashboardView from './components/DashboardView';
 import PuzzleView from './components/PuzzleView';
@@ -64,13 +64,22 @@ export default function App() {
 
   const [pouchOpen, setPouchOpen] = useState(false);
 
-  // Pending duel room from dashboard live rooms
-  const [pendingJoinRoom, setPendingJoinRoom] = useState<DuelRoom | null>(null);
+  // Duel code from a share link (?duel=ABC123) — handed to the Duel screen.
+  const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
+  const activeDuelId = useGameStore(s => s.activeDuelId);
 
-  const handleJoinRoom = (room: DuelRoom) => {
-    setPendingJoinRoom(room);
-    setCurrentScreen('duel');
-  };
+  // Parse ?duel=CODE once on load (friend's invite link).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const duelCode = params.get('duel');
+    if (duelCode) {
+      setPendingJoinCode(duelCode.toUpperCase());
+      setCurrentScreen('duel');
+      params.delete('duel');
+      const qs = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    }
+  }, []);
 
   // Audio mute/unmute state
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -99,14 +108,6 @@ export default function App() {
     setProfile(prev => ({ ...prev, coins: prev.coins + amount }));
     setCoinHistory(prev => [
       { desc, amount: `+${amount}`, type: 'plus', time: 'Just now' },
-      ...prev,
-    ]);
-  };
-
-  const deductCoins = (amount: number, desc: string) => {
-    setProfile(prev => ({ ...prev, coins: Math.max(0, prev.coins - amount) }));
-    setCoinHistory(prev => [
-      { desc, amount: `-${amount}`, type: 'minus', time: 'Just now' },
       ...prev,
     ]);
   };
@@ -183,19 +184,22 @@ export default function App() {
   };
 
   // ── Duel result callback ────────────────────────────────────────────
-  const handleDuelFinished = (won: boolean, prize: number) => {
+  // Rewards mirror exactly what settle_duel recorded server-side (Phase 2
+  // will make the server players row the source of truth for the profile).
+  const handleDuelFinished = (outcome: DuelOutcome) => {
     setProfile(prev => ({
       ...prev,
       duelsPlayed: prev.duelsPlayed + 1,
-      duelsWon: won ? prev.duelsWon + 1 : prev.duelsWon,
+      duelsWon: outcome.won ? prev.duelsWon + 1 : prev.duelsWon,
     }));
-    if (won) {
-      addCoins(prize, 'Duel prize payout');
-      addXp(60);
-      handleUnlockAchievement('duel-win');
-    } else {
-      addXp(20);
-    }
+    const label = outcome.draw
+      ? 'Duel tie bonus'
+      : outcome.won
+      ? 'Duel win pot'
+      : 'Duel consolation coins';
+    addCoins(outcome.rewards.coins, label);
+    addXp(outcome.rewards.xp);
+    if (outcome.won) handleUnlockAchievement('duel-win');
   };
 
   // Achievements can be granted by checks over time (coins/level milestones)
@@ -386,9 +390,7 @@ export default function App() {
                 onNavigate={setCurrentScreen}
                 profile={profile}
                 achievements={achievements}
-                openRooms={[...OPEN_DUEL_ROOMS].filter(r => !r.isFull).sort((a, b) => a.stake - b.stake).slice(0, 2)}
-                waitingRooms={waitingRoomCount()}
-                onJoinRoom={handleJoinRoom}
+                activeDuelId={activeDuelId}
               />
             )}
 
@@ -402,11 +404,9 @@ export default function App() {
             {currentScreen === 'duel' && (
               <DuelView
                 onNavigate={setCurrentScreen}
-                coins={profile.coins}
-                onDeductCoins={(amount, desc) => deductCoins(amount, desc)}
                 onDuelFinished={handleDuelFinished}
-                joinRoom={pendingJoinRoom}
-                onJoinRoomHandled={() => setPendingJoinRoom(null)}
+                joinCode={pendingJoinCode}
+                onJoinCodeHandled={() => setPendingJoinCode(null)}
               />
             )}
 
