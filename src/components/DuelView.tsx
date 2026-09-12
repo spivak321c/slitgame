@@ -173,6 +173,7 @@ export default function DuelView({
     const won = !snapshot.duel.is_draw && snapshot.duel.winner_player_id === snapshot.myPlayerId;
     const draw = snapshot.duel.is_draw;
     const outcome: DuelOutcome = {
+      duelId: snapshot.duel.id,
       won,
       draw,
       word: snapshot.duel.revealed_word ?? '?????',

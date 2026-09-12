@@ -250,6 +250,34 @@ export default function ProfileView({
           </div>
         </div>
 
+        {/* Win rates (Phase 2) — positive framing only */}
+        {(() => {
+          const totalGames = profile.gamesPlayed + profile.duelsPlayed;
+          const totalWins = profile.gamesWon + profile.duelsWon;
+          const puzzleRate = profile.gamesPlayed > 0 ? Math.round((profile.gamesWon / profile.gamesPlayed) * 100) : 0;
+          const duelRate = profile.duelsPlayed > 0 ? Math.round((profile.duelsWon / profile.duelsPlayed) * 100) : 0;
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div className="flex items-center justify-between bg-[#FAF4EA] border border-[#EADFCB] rounded-2xl px-3.5 py-2.5">
+                <span className="font-logo font-bold text-[11px] text-[#3D342F]">Total games</span>
+                <span className="font-mono text-xs font-bold text-[#6F625B]">{totalGames}</span>
+              </div>
+              <div className="flex items-center justify-between bg-[#FAF4EA] border border-[#EADFCB] rounded-2xl px-3.5 py-2.5">
+                <span className="font-logo font-bold text-[11px] text-[#3D342F]">Puzzle solve rate</span>
+                <span className="font-mono text-xs font-bold text-[#79B96B]">
+                  {profile.gamesPlayed > 0 ? `${puzzleRate}%` : '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between bg-[#FAF4EA] border border-[#EADFCB] rounded-2xl px-3.5 py-2.5">
+                <span className="font-logo font-bold text-[11px] text-[#3D342F]">Duel win rate</span>
+                <span className="font-mono text-xs font-bold text-[#F2B84B]">
+                  {profile.duelsPlayed > 0 ? `${duelRate}%` : '—'}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Best attempts per difficulty */}
         <div className="space-y-2">
           {DIFFICULTIES.map(cfg => (

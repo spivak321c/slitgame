@@ -59,6 +59,8 @@ export interface DuelRewards {
 }
 
 export interface DuelOutcome {
+  /** Phase 2 — the settled duel's id, used for idempotent local payout. */
+  duelId: string;
   won: boolean;
   draw: boolean;
   word: string;

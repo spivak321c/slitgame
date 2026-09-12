@@ -158,6 +158,51 @@ export async function touchDuel(duelId: string): Promise<void> {
   }
 }
 
+// ── Phase 2: server-authoritative profile sync ─────────────────────────
+// After a duel finishes, settle_duel has already updated the player's row
+// server-side (coins, xp, duels_played, duels_won). We mirror that row into
+// the local profile so the server is the source of truth — the instant
+// client-side award in handleDuelFinished is just for immediate feedback;
+// this sync corrects any drift and prevents double-payout on refresh.
+
+export interface ServerPlayerRow {
+  coins: number;
+  xp: number;
+  duelsPlayed: number;
+  duelsWon: number;
+  username: string;
+  avatar: string;
+}
+
+/**
+ * Reads the authenticated player's row from Supabase (RLS-gated to own row).
+ * Returns null when Supabase is unconfigured, the session is missing, or the
+ * row doesn't exist yet — callers must treat null as "stay with local award".
+ */
+export async function fetchServerProfile(): Promise<ServerPlayerRow | null> {
+  if (!supabase || !isSupabaseConfigured) return null;
+  const playerId = await ensureAnonymousSession();
+  if (!playerId) return null;
+  const { data, error } = await supabase
+    .from('players')
+    .select('coins,xp,duels_played,duels_won,username,avatar')
+    .eq('id', playerId)
+    .maybeSingle();
+  if (error) {
+    console.warn('[duel] fetchServerProfile failed:', error.message);
+    return null;
+  }
+  if (!data) return null;
+  return {
+    coins: data.coins,
+    xp: data.xp,
+    duelsPlayed: data.duels_played,
+    duelsWon: data.duels_won,
+    username: data.username,
+    avatar: data.avatar,
+  };
+}
+
 /** Full snapshot for a duel we belong to (used on load / reconnect). */
 export async function getDuelState(duelId: string): Promise<DuelSnapshot | null> {
   if (!supabase || !isSupabaseConfigured) return null;

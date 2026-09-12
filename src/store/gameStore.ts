@@ -29,6 +29,7 @@ export const DEFAULT_PROFILE: PlayerProfile = {
   duelsPlayed: 0,
   duelsWon: 0,
   bestAttempts: { easy: null, classic: null, hard: null },
+  hasOnboarded: false,
 };
 
 export interface CoinLogEntry {
@@ -52,10 +53,15 @@ interface GameStoreState {
   achievements: Achievement[];
   /** Duel currently being played / awaited — survives refresh (Phase 1). */
   activeDuelId: string | null;
+  /** Phase 2 — ids of duels whose payout has been applied locally, so a
+   *  refresh on the result screen can't re-award (idempotency). */
+  settledDuelIds: string[];
   setProfile: (updater: Updater<PlayerProfile>) => void;
   setCoinHistory: (updater: Updater<CoinLogEntry[]>) => void;
   setAchievements: (updater: Updater<Achievement[]>) => void;
   setActiveDuel: (duelId: string | null) => void;
+  markDuelSettled: (duelId: string) => void;
+  resetSettledDuels: () => void;
 }
 
 export const useGameStore = create<GameStoreState>()(
@@ -65,6 +71,7 @@ export const useGameStore = create<GameStoreState>()(
       coinHistory: [],
       achievements: INITIAL_ACHIEVEMENTS,
       activeDuelId: null,
+      settledDuelIds: [],
       setProfile: (updater) =>
         set((s) => ({ profile: resolve(updater, s.profile) })),
       setCoinHistory: (updater) =>
@@ -74,6 +81,13 @@ export const useGameStore = create<GameStoreState>()(
       setAchievements: (updater) =>
         set((s) => ({ achievements: resolve(updater, s.achievements) })),
       setActiveDuel: (duelId) => set({ activeDuelId: duelId }),
+      markDuelSettled: (duelId) =>
+        set((s) =>
+          s.settledDuelIds.includes(duelId)
+            ? s
+            : { settledDuelIds: [...s.settledDuelIds, duelId].slice(-MAX_COIN_LOG) }
+        ),
+      resetSettledDuels: () => set({ settledDuelIds: [] }),
     }),
     {
       name: 'slotword-save-v1',
@@ -85,6 +99,7 @@ export const useGameStore = create<GameStoreState>()(
         coinHistory: s.coinHistory,
         achievements: s.achievements,
         activeDuelId: s.activeDuelId,
+        settledDuelIds: s.settledDuelIds,
       }),
       // Achievement catalog always comes from code (so newly shipped
       // achievements appear for returning players); only unlock state is
@@ -92,9 +107,23 @@ export const useGameStore = create<GameStoreState>()(
       merge: (persisted, current) => {
         const saved = (persisted as Partial<GameStoreState> | undefined) ?? {};
         const savedAchievements = saved.achievements ?? [];
+        const savedProfile = saved.profile;
         return {
           ...current,
           ...saved,
+          // Ensure forward-compat: returning saves pre-dating Phase 2 get
+          // hasOnboarded inferred from existing progress so they're not
+          // forced back through onboarding.
+          profile: savedProfile
+            ? {
+                ...DEFAULT_PROFILE,
+                ...savedProfile,
+                hasOnboarded:
+                  savedProfile.hasOnboarded ??
+                  (savedProfile.gamesPlayed > 0 ||
+                    savedProfile.duelsPlayed > 0),
+              }
+            : current.profile,
           achievements: current.achievements.map((a) => {
             const match = savedAchievements.find((s) => s.id === a.id);
             return match

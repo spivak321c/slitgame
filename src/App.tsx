@@ -27,6 +27,7 @@ import {
 } from './types';
 import { useGameStore, useSessionStore } from './store/gameStore';
 import { ensureAnonymousSession } from './lib/supabase';
+import { fetchServerProfile } from './lib/duelService';
 import type { DuelOutcome } from './lib/duelTypes';
 import { sound } from './utils/audio';
 import LandingPage from './components/LandingPage';
@@ -36,6 +37,7 @@ import DuelView from './components/DuelView';
 import LeaderboardView from './components/LeaderboardView';
 import AchievementsView from './components/AchievementsView';
 import ProfileView from './components/ProfileView';
+import OnboardingView from './components/OnboardingView';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('landing');
@@ -48,6 +50,8 @@ export default function App() {
   const setCoinHistory = useGameStore(s => s.setCoinHistory);
   const achievements = useGameStore(s => s.achievements);
   const setAchievements = useGameStore(s => s.setAchievements);
+  const settledDuelIds = useGameStore(s => s.settledDuelIds);
+  const markDuelSettled = useGameStore(s => s.markDuelSettled);
 
   // Anonymous backend session for duels (Phase 1). Resolves to local-only
   // mode (playerId null) when Supabase isn't configured or offline.
@@ -184,22 +188,48 @@ export default function App() {
   };
 
   // ── Duel result callback ────────────────────────────────────────────
-  // Rewards mirror exactly what settle_duel recorded server-side (Phase 2
-  // will make the server players row the source of truth for the profile).
+  // Phase 2: the server's `players` row is the source of truth —
+  // settle_duel already awarded coins/XP/duels_* server-side and
+  // idempotently. We apply an instant local mirror for immediate pouch
+  // feedback, mark the duel settled (so a refresh can't re-award), then
+  // async-sync the authoritative server values back into the profile.
+  // If Supabase is unconfigured (offline), the local award stands alone.
   const handleDuelFinished = (outcome: DuelOutcome) => {
-    setProfile(prev => ({
-      ...prev,
-      duelsPlayed: prev.duelsPlayed + 1,
-      duelsWon: outcome.won ? prev.duelsWon + 1 : prev.duelsWon,
-    }));
-    const label = outcome.draw
-      ? 'Duel tie bonus'
-      : outcome.won
-      ? 'Duel win pot'
-      : 'Duel consolation coins';
-    addCoins(outcome.rewards.coins, label);
-    addXp(outcome.rewards.xp);
-    if (outcome.won) handleUnlockAchievement('duel-win');
+    const alreadySettled = settledDuelIds.includes(outcome.duelId);
+    if (!alreadySettled) {
+      markDuelSettled(outcome.duelId);
+      setProfile(prev => ({
+        ...prev,
+        duelsPlayed: prev.duelsPlayed + 1,
+        duelsWon: outcome.won ? prev.duelsWon + 1 : prev.duelsWon,
+      }));
+      const label = outcome.draw
+        ? 'Duel tie bonus'
+        : outcome.won
+        ? 'Duel win pot'
+        : 'Duel consolation coins';
+      addCoins(outcome.rewards.coins, label);
+      addXp(outcome.rewards.xp);
+      if (outcome.won) handleUnlockAchievement('duel-win');
+    }
+
+    // Reconcile with the server — replaces coins/xp/duels_* with the
+    // authoritative totals (server already includes this duel's award).
+    // Best-effort: a network failure just leaves the local mirror in place.
+    fetchServerProfile().then(server => {
+      if (!server) return;
+      setProfile(prev => ({
+        ...prev,
+        coins: server.coins,
+        xp: server.xp,
+        duelsPlayed: server.duelsPlayed,
+        duelsWon: server.duelsWon,
+        // The create_duel/join_duel RPCs upsert username/avatar, so the
+        // server row is the freshest source for those too.
+        username: server.username || prev.username,
+        avatar: server.avatar || prev.avatar,
+      }));
+    });
   };
 
   // Achievements can be granted by checks over time (coins/level milestones)
@@ -212,6 +242,21 @@ export default function App() {
 
   const updateProfile = (patch: Partial<PlayerProfile>) => {
     setProfile(prev => ({ ...prev, ...patch }));
+  };
+
+  // ── Onboarding completion (Phase 2) ────────────────────────────────
+  // Fired by OnboardingView's final step — stores the kid's chosen avatar
+  // + fun name and flips hasOnboarded so the gate never shows again.
+  const handleOnboardingComplete = (username: string, avatar: string) => {
+    sound.playRewardSound();
+    triggerCelebration();
+    setProfile(prev => ({
+      ...prev,
+      hasOnboarded: true,
+      username: username.trim().replace(/^@+/, '') || 'paperpilot',
+      avatar: avatar || prev.avatar,
+    }));
+    setCurrentScreen('dashboard');
   };
 
   return (
@@ -372,13 +417,17 @@ export default function App() {
       <main className="flex-1 w-full flex flex-col justify-start relative pb-20 md:pb-8">
         <AnimatePresence mode="wait">
           <motion.div
-            key={currentScreen}
+            key={profile.hasOnboarded ? currentScreen : 'onboarding'}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="w-full"
           >
+            {!profile.hasOnboarded ? (
+              <OnboardingView onComplete={handleOnboardingComplete} />
+            ) : (
+              <>
             {currentScreen === 'landing' && (
               <LandingPage
                 onNavigate={setCurrentScreen}
@@ -433,11 +482,14 @@ export default function App() {
                 onOpenPouch={() => setPouchOpen(true)}
               />
             )}
+              </>
+            )}
           </motion.div>
         </AnimatePresence>
       </main>
 
       {/* 4. FIXED MOBILE BOTTOM NAVIGATION BAR */}
+      {profile.hasOnboarded && (
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FFFCF7]/95 backdrop-blur-md border-t-2 border-[#E7DCCB] px-3 py-1.5 flex justify-around items-center shadow-[0_-4px_20px_rgba(61,52,47,0.08)]">
         {[
           { id: 'dashboard', label: 'Workshop', icon: Compass, color: 'text-[#E45C75]' },
@@ -476,6 +528,7 @@ export default function App() {
           );
         })}
       </div>
+      )}
 
       {/* 5. FOOTER CREDITS */}
       <footer className="py-8 border-t border-[#E7DCCB]/60 text-center text-xs text-[#998D85] font-display">

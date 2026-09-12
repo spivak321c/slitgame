@@ -67,6 +67,8 @@ export interface PlayerProfile {
   duelsPlayed: number;
   duelsWon: number;
   bestAttempts: Record<Difficulty, number | null>;
+  /** Phase 2 — flips to true once the 3-step onboarding completes. */
+  hasOnboarded: boolean;
 }
 
 // Level curve: each level costs 100 more XP than the last.
