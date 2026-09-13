@@ -1,9 +1,11 @@
 import { motion } from 'motion/react';
 import { Trophy, Award, ArrowRight, Play, Users, TrendingUp, Zap, Coins, Gamepad2, Swords, Flame, ShoppingBag, BookOpen, Target } from 'lucide-react';
-import { ScreenType, Achievement, PlayerProfile, levelFromXp, levelTitle, StreakInfo, Quest, todayStr } from '../types';
+import { ScreenType, Achievement, PlayerProfile, levelFromXp, levelTitle, StreakInfo, Quest, todayStr, type Difficulty } from '../types';
+import type { RecentOpponent } from '../lib/duelTypes';
 import MascotBubble from './MascotBubble';
 import ChestCard from './ChestCard';
 import QuestCard from './QuestCard';
+import RecentRivals from './RecentRivals';
 
 const BADGE_ICONS: Record<Achievement['iconType'], typeof Award> = {
   'tile': Award,
@@ -25,6 +27,8 @@ interface DashboardViewProps {
   onClaimQuest: (questId: string) => void;
   equippedMascotItem: string | null;
   ownedStickerCount: number;
+  recentOpponents: RecentOpponent[];
+  onChallengeRival: (difficulty: Difficulty) => void;
 }
 
 export default function DashboardView({
@@ -39,6 +43,8 @@ export default function DashboardView({
   onClaimQuest,
   equippedMascotItem,
   ownedStickerCount,
+  recentOpponents,
+  onChallengeRival,
 }: DashboardViewProps) {
   // Find a locked and an unlocked achievement
   const recentBadge = achievements.find(a => a.unlocked) || achievements[1];
@@ -49,7 +55,7 @@ export default function DashboardView({
 
   // Mascot greeting messages — positive, encouraging, contextual
   const mascotMessage = (() => {
-    if (streak.current >= 7) return `${streak.current}-day streak! You're on fire! 🔥`;
+    if (streak.current >= 7) return `${streak.current}-day streak! You're on fire!`;
     if (solvedCount === 0) return 'Hi! I\'m Slit! Ready to solve your first puzzle?';
     if (playedToday) return 'Great solving today! Come back tomorrow for more!';
     return 'Welcome back! Let\'s solve some words together!';
@@ -83,13 +89,13 @@ export default function DashboardView({
             animate={{ opacity: 1, scale: 1 }}
             className="flex items-center gap-2 px-4 py-2 bg-[#FDECE7] border border-[#FADCD5] rounded-2xl shrink-0"
           >
-            <motion.span
+            <motion.div
               animate={{ scale: [1, 1.15, 1] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-              className="text-2xl"
+              className="w-8 h-8 rounded-xl bg-[#FDECE7] border border-[#FADCD5] flex items-center justify-center"
             >
-              🔥
-            </motion.span>
+              <Flame className="w-5 h-5 text-[#F28C6F]" />
+            </motion.div>
             <div>
               <div className="font-logo font-black text-lg text-[#F28C6F] leading-none">{streak.current}</div>
               <div className="text-[10px] text-[#998D85] font-mono">day streak</div>
@@ -332,6 +338,10 @@ export default function DashboardView({
         </motion.div>
 
       </div>
+
+      {/* Phase 4 — Recent Rivals: one-tap rematches with real opponents.
+          Renders nothing until you've finished at least one duel. */}
+      <RecentRivals rivals={recentOpponents} onChallenge={onChallengeRival} />
 
       {/* Shop + Collection Quick Links */}
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">

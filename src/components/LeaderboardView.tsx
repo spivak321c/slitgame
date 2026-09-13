@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Star, ArrowLeft, Medal, Coins, Trophy, Gamepad2, Swords, Users } from 'lucide-react';
+import { ScrollText, ArrowLeft, Medal, Coins, Trophy, Gamepad2, Swords, Users } from 'lucide-react';
 import { ScreenType, PlayerProfile, levelFromXp, levelTitle } from '../types';
 
 interface LeaderboardViewProps {
@@ -110,7 +110,7 @@ export default function LeaderboardView({ onNavigate, profile }: LeaderboardView
 
       <div className="bg-[#FFF9F0] border border-[#E7DCCB] rounded-2xl p-5 text-left text-xs leading-relaxed text-[#6F625B]">
         <h3 className="font-logo font-bold text-sm text-[#3D342F] mb-2 flex items-center gap-1">
-          <Star className="w-4 h-4 text-[#F2B84B] fill-[#F2B84B]" />
+          <ScrollText className="w-4 h-4 text-[#F2B84B]" />
           Ranking Rules
         </h3>
         <ul className="list-disc pl-4 space-y-1">

@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Check } from 'lucide-react';
+import { Check, Gamepad2, Swords, Coins, Keyboard } from 'lucide-react';
 import type { Key } from 'react';
 import ProgressBar from './ProgressBar';
 import type { Quest } from '../types';
@@ -15,8 +15,15 @@ interface QuestCardProps {
   key?: Key;
 }
 
+const QUEST_ICONS: Record<string, typeof Gamepad2> = {
+  gamepad: Gamepad2,
+  swords: Swords,
+  letters: Keyboard,
+};
+
 export default function QuestCard({ quest, onClaim }: QuestCardProps) {
   const complete = quest.progress >= quest.goal;
+  const QuestIcon = QUEST_ICONS[quest.icon] ?? Gamepad2;
 
   return (
     <div
@@ -29,18 +36,26 @@ export default function QuestCard({ quest, onClaim }: QuestCardProps) {
       }`}
     >
       <div className="flex items-center gap-3 mb-2.5">
-        <span className="text-xl shrink-0">{quest.icon}</span>
+        <span className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center shrink-0 ${
+          quest.claimed
+            ? 'bg-[#EAF5E7] border-[#BFE3C9] text-[#79B96B]'
+            : complete
+            ? 'bg-[#FFF3D6] border-[#F2C974] text-[#D4960F]'
+            : 'bg-[#FAF4EA] border-[#EADFCB] text-[#A69485]'
+        }`}>
+          <QuestIcon className="w-4 h-4" />
+        </span>
         <div className="flex-1 min-w-0">
-          <h4 className="font-logo font-bold text-xs text-[#3D342F] truncate">
+          <h4 className="font-logo font-bold text-xs text-[#3D342F]">
             {quest.title}
           </h4>
-          <p className="text-[10px] text-[#998D85] font-display truncate">
+          <p className="text-[10px] text-[#998D85] font-display">
             {quest.description}
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <span className="text-xs font-mono font-bold text-[#D4960F]">+{quest.reward}</span>
-          <span className="text-xs">🪙</span>
+          <Coins className="w-3.5 h-3.5 text-[#F2B84B]" />
         </div>
       </div>
 

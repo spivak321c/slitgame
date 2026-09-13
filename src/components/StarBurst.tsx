@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { PartyPopper, Star } from 'lucide-react';
+import { PartyPopper, Gift, Heart } from 'lucide-react';
 
 /**
  * StarBurst — confetti star burst overlay for celebrations.
@@ -18,7 +18,7 @@ interface StarBurstProps {
   onDone: () => void;
 }
 
-const ICONS = [PartyPopper, Star, Star, PartyPopper];
+const ICONS = [PartyPopper, Gift, Heart, PartyPopper];
 const COLORS = ['#E45C75', '#F2B84B', '#79B96B', '#65B9E8', '#8B72C9', '#F28C6F'];
 
 export default function StarBurst({ data, onDone }: StarBurstProps) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Flame,
@@ -36,15 +36,25 @@ import {
   type MascotMood,
 } from './types';
 import { useGameStore, useSessionStore } from './store/gameStore';
-import { ensureAnonymousSession } from './lib/supabase';
-import { fetchServerProfile } from './lib/duelService';
 import type { DuelOutcome } from './lib/duelTypes';
 import { sound } from './utils/audio';
 import LandingPage from './components/LandingPage';
 import DashboardView from './components/DashboardView';
 import PuzzleView from './components/PuzzleView';
-import DuelView from './components/DuelView';
 import LeaderboardView from './components/LeaderboardView';
+
+// Phase 4 — perf: the duel screen (and with it the whole Supabase client)
+// is lazy-loaded. Solo players never download it. `ensureAnonymousSession`
+// and `fetchServerProfile` are likewise called through dynamic imports so
+// nothing in this file statically pulls @supabase/supabase-js.
+const DuelView = lazy(() => import('./components/DuelView'));
+
+/** True when the Supabase env vars are set — duplicated here (instead of
+ *  importing ./lib/supabase) so the check itself doesn't pull the client
+ *  into the main chunk. Keep in sync with lib/supabase.ts. */
+const SUPABASE_ENV_SET = Boolean(
+  import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 import AchievementsView from './components/AchievementsView';
 import ProfileView from './components/ProfileView';
 import OnboardingView from './components/OnboardingView';
@@ -84,18 +94,38 @@ export default function App() {
   const dyslexiaFont = useGameStore(s => s.dyslexiaFont);
   const toggleDyslexiaFont = useGameStore(s => s.toggleDyslexiaFont);
 
-  // Anonymous backend session for duels (Phase 1). Resolves to local-only
-  // mode (playerId null) when Supabase isn't configured or offline.
+  // Anonymous backend session for duels (Phase 1+4). Handshake is LAZY:
+  // it only runs when the player enters the duel screen, has an active
+  // duel, or opens a share link — so solo players never load the client.
   const setSession = useSessionStore(s => s.setSession);
-  useEffect(() => {
-    let cancelled = false;
-    ensureAnonymousSession().then(id => {
-      if (!cancelled) setSession(id);
-    });
-    return () => {
-      cancelled = true;
-    };
+  const playerId = useSessionStore(s => s.playerId);
+  const sessionStarted = useRef(false);
+  const startSession = useCallback(() => {
+    if (sessionStarted.current) return;
+    sessionStarted.current = true;
+    import('./lib/supabase')
+      .then(m => m.ensureAnonymousSession())
+      .then(id => setSession(id))
+      .catch(() => setSession(null));
   }, [setSession]);
+
+  // Phase 4 — recent rivals (cached; refreshed whenever we have a session).
+  const recentOpponents = useGameStore(s => s.recentOpponents);
+  const setRecentOpponents = useGameStore(s => s.setRecentOpponents);
+  // Phase 4 — tapped "rematch" on the Recent Rivals strip → auto-create a
+  // new duel at that difficulty once the duel screen loads.
+  const [challengeDifficulty, setChallengeDifficulty] = useState<Difficulty | null>(null);
+
+  useEffect(() => {
+    if (!playerId || !SUPABASE_ENV_SET) return;
+    import('./lib/duelService')
+      .then(m => m.fetchRecentOpponents())
+      .then(list => {
+        // Keep the cached copy if the server returns nothing (offline/empty).
+        if (list.length > 0) setRecentOpponents(list);
+      })
+      .catch(() => undefined);
+  }, [playerId, setRecentOpponents]);
 
   const [pouchOpen, setPouchOpen] = useState(false);
 
@@ -115,6 +145,12 @@ export default function App() {
       window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
     }
   }, []);
+
+  // Start the backend session lazily: entering the duel screen, having a
+  // saved active duel, or opening via a share link all trigger it.
+  useEffect(() => {
+    if (currentScreen === 'duel' || activeDuelId || pendingJoinCode) startSession();
+  }, [currentScreen, activeDuelId, pendingJoinCode, startSession]);
 
   // Audio mute/unmute state
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -374,20 +410,23 @@ export default function App() {
     // Reconcile with the server — replaces coins/xp/duels_* with the
     // authoritative totals (server already includes this duel's award).
     // Best-effort: a network failure just leaves the local mirror in place.
-    fetchServerProfile().then(server => {
-      if (!server) return;
-      setProfile(prev => ({
-        ...prev,
-        coins: server.coins,
-        xp: server.xp,
-        duelsPlayed: server.duelsPlayed,
-        duelsWon: server.duelsWon,
-        // The create_duel/join_duel RPCs upsert username/avatar, so the
-        // server row is the freshest source for those too.
-        username: server.username || prev.username,
-        avatar: server.avatar || prev.avatar,
-      }));
-    });
+    // (Dynamic import keeps @supabase/supabase-js out of the main chunk.)
+    import('./lib/duelService')
+      .then(m => m.fetchServerProfile())
+      .then(server => {
+        if (!server) return;
+        setProfile(prev => ({
+          ...prev,
+          coins: server.coins,
+          xp: server.xp,
+          duelsPlayed: server.duelsPlayed,
+          duelsWon: server.duelsWon,
+          // The create_duel/join_duel RPCs upsert username/avatar, so the
+          // server row is the freshest source for those too.
+          username: server.username || prev.username,
+          avatar: server.avatar || prev.avatar,
+        }));
+      });
   };
 
   // Achievements can be granted by checks over time (coins/level milestones)
@@ -419,6 +458,15 @@ export default function App() {
 
   return (
     <div className={`min-h-screen bg-[#FFF9F0] text-[#3D342F] font-body selection:bg-[#FFF3D6] relative flex flex-col justify-between ${dyslexiaFont ? 'font-dyslexia' : ''}`}>
+
+      {/* Skip link — first tabbable focus; jumps keyboard users past the
+          header/nav straight into the game (Phase 4 a11y). */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[80] focus:px-4 focus:py-2.5 focus:bg-[#FFFCF7] focus:border-2 focus:border-[#E45C75] focus:rounded-xl focus:shadow-raised font-display font-bold text-sm"
+      >
+        Skip to game
+      </a>
 
       {/* 1. TOP GLOBAL APP HEADER */}
       <header className="sticky top-0 z-40 bg-[#FFFCF7]/95 backdrop-blur-md border-b-2 border-[#E7DCCB] px-2.5 sm:px-4 py-2 sm:py-3 shadow-[0_2px_12px_rgba(61,52,47,0.02)]">
@@ -553,7 +601,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* 3. MAIN INTERACTIVE CONTENT PORT */}
-      <main className="flex-1 w-full flex flex-col justify-start relative pb-20 md:pb-8">
+      <main id="main-content" tabIndex={-1} className="flex-1 w-full flex flex-col justify-start relative pb-20 md:pb-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={profile.hasOnboarded ? currentScreen : 'onboarding'}
@@ -586,6 +634,11 @@ export default function App() {
                 onClaimQuest={claimQuest}
                 equippedMascotItem={equippedMascotItem}
                 ownedStickerCount={ownedStickers.length}
+                recentOpponents={recentOpponents}
+                onChallengeRival={(difficulty) => {
+                  setChallengeDifficulty(difficulty);
+                  setCurrentScreen('duel');
+                }}
               />
             )}
 
@@ -597,12 +650,30 @@ export default function App() {
             )}
 
             {currentScreen === 'duel' && (
-              <DuelView
-                onNavigate={setCurrentScreen}
-                onDuelFinished={handleDuelFinished}
-                joinCode={pendingJoinCode}
-                onJoinCodeHandled={() => setPendingJoinCode(null)}
-              />
+              <Suspense
+                fallback={
+                  <div
+                    className="flex flex-col items-center justify-center py-20 text-[#6F625B]"
+                    role="status"
+                    aria-label="Loading the duel arena"
+                  >
+                    <div
+                      className="w-9 h-9 rounded-xl bg-[#FDECE7] border border-[#FADCD5] animate-pulse"
+                      aria-hidden="true"
+                    />
+                    <p className="mt-3 text-xs font-display font-bold">Loading the duel arena…</p>
+                  </div>
+                }
+              >
+                <DuelView
+                  onNavigate={setCurrentScreen}
+                  onDuelFinished={handleDuelFinished}
+                  joinCode={pendingJoinCode}
+                  onJoinCodeHandled={() => setPendingJoinCode(null)}
+                  autoCreateDifficulty={challengeDifficulty}
+                  onAutoCreateHandled={() => setChallengeDifficulty(null)}
+                />
+              </Suspense>
             )}
 
             {currentScreen === 'leaderboard' && (
@@ -700,13 +771,8 @@ export default function App() {
 
       {/* 5. FOOTER CREDITS */}
       <footer className="py-8 border-t border-[#E7DCCB]/60 text-center text-xs text-[#998D85] font-display">
-        <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="max-w-4xl mx-auto px-4">
           <p>© 2026 Slotword Workshop. Coins are fun-only — no real money involved.</p>
-          <div className="flex gap-4">
-            <button onClick={() => setCurrentScreen('profile')} className="hover:text-[#3D342F] transition-colors">
-              Player Profile
-            </button>
-          </div>
         </div>
       </footer>
 

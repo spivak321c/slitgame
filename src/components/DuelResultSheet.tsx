@@ -11,7 +11,6 @@ interface DuelResultSheetProps {
   attempts: number;
   timeMs: number | null;
   opponentName: string;
-  opponentAvatar: string;
   rewards: DuelRewards;
   onRematch: () => void;
   onExit: () => void;
@@ -30,7 +29,6 @@ export default function DuelResultSheet({
   attempts,
   timeMs,
   opponentName,
-  opponentAvatar,
   rewards,
   onRematch,
   onExit,
@@ -78,7 +76,7 @@ export default function DuelResultSheet({
         {won ? (
           <>
             The word was <span className="font-logo font-bold text-[#3D342F]">{word}</span> — you beat{' '}
-            {opponentAvatar} {opponentName} with <strong>{attempts}</strong>{' '}
+            {opponentName} with <strong>{attempts}</strong>{' '}
             {attempts === 1 ? 'guess' : 'guesses'}!
           </>
         ) : draw ? (

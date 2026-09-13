@@ -11,12 +11,13 @@ import {
   Copy,
   Check,
   Link as LinkIcon,
+  Share2,
   LogOut,
   WifiOff,
   Timer,
   Zap,
 } from 'lucide-react';
-import { ScreenType, DIFFICULTIES } from '../types';
+import { ScreenType, DIFFICULTIES, type Difficulty } from '../types';
 import { sound } from '../utils/audio';
 import { useGameStore, useSessionStore } from '../store/gameStore';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -50,6 +51,9 @@ interface DuelViewProps {
   onDuelFinished: (outcome: DuelOutcome) => void;
   joinCode?: string | null;
   onJoinCodeHandled?: () => void;
+  /** Phase 4 — auto-create a duel at this difficulty (Recent Rivals rematch). */
+  autoCreateDifficulty?: Difficulty | null;
+  onAutoCreateHandled?: () => void;
 }
 
 const fmtClock = (totalSec: number) =>
@@ -62,6 +66,8 @@ export default function DuelView({
   onDuelFinished,
   joinCode,
   onJoinCodeHandled,
+  autoCreateDifficulty,
+  onAutoCreateHandled,
 }: DuelViewProps) {
   // ── Stores ──────────────────────────────────────────────────────────
   const profile = useGameStore(s => s.profile);
@@ -137,6 +143,34 @@ export default function DuelView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady]);
+
+  // ── Phase 4: auto-create from Recent Rivals (one-tap rematch) ───────
+  // Fires once per challenge: waits for the session handshake, creates a
+  // duel at the requested difficulty, and lands in the waiting room.
+  const autoCreateBusyRef = useRef(false);
+  useEffect(() => {
+    if (!authReady || !autoCreateDifficulty || autoCreateBusyRef.current) return;
+    autoCreateBusyRef.current = true;
+    (async () => {
+      try {
+        const { duelId } = await createDuel(
+          autoCreateDifficulty,
+          profile.username,
+          profile.avatar
+        );
+        const snap = await getDuelState(duelId);
+        setActiveDuel(duelId);
+        if (snap) applySnapshot(snap);
+        sound.playRewardSound();
+      } catch (err) {
+        showError(err);
+      } finally {
+        autoCreateBusyRef.current = false;
+        onAutoCreateHandled?.();
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authReady, autoCreateDifficulty]);
 
   // ── Realtime subscription while a duel is live/waiting ─────────────
   const duelStatus = duel?.status;
@@ -354,6 +388,26 @@ export default function DuelView({
     }
   };
 
+  // Phase 4 — share the invite via the OS share sheet when available
+  // (mobile / desktop apps), falling back to clipboard copy.
+  const shareDuel = async () => {
+    if (!duel) return;
+    const url = `${window.location.origin}${window.location.pathname}?duel=${duel.code}`;
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: 'Slotword Duel',
+          text: `Race me on Slotword! Use code ${duel.code} — first to solve the word wins!`,
+          url,
+        });
+        return;
+      } catch {
+        /* sheet dismissed — fall through to clipboard */
+      }
+    }
+    copyToClipboard(url, 'link');
+  };
+
   // ── Board rendering ─────────────────────────────────────────────────
   const tileColors = (state?: 'correct' | 'present' | 'absent') => {
     if (state === 'correct') return { bg: '#79B96B', border: '#5C9B50', text: '#FFFFFF' };
@@ -404,10 +458,17 @@ export default function DuelView({
                           }
                     }
                     transition={{ duration: 0.5, delay: cIdx * 0.08, ease: 'easeInOut' }}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border-2 font-logo font-bold text-base sm:text-lg flex items-center justify-center shadow-xs select-none"
+                    className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border-2 font-logo font-bold text-base sm:text-lg flex items-center justify-center shadow-xs select-none"
                     style={{ transformStyle: 'preserve-3d' }}
                   >
                     {filled ? letter : ''}
+                    {/* Phase 4 — color-blind-safe glyph: ✓ correct, ◐ present, · absent */}
+                    <span
+                      className="tile-state-glyph"
+                      aria-hidden="true"
+                    >
+                      {state === 'correct' ? '✓' : state === 'present' ? '◐' : state === 'absent' ? '·' : ''}
+                    </span>
                   </motion.div>
                 );
               })}
@@ -499,7 +560,11 @@ export default function DuelView({
     >
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-full bg-white border border-[#E7DCCB] grid place-items-center text-base shrink-0 select-none">
-          {player?.avatar ?? (isMe ? profile.avatar : '❔')}
+          {player?.avatar ? (
+            player.avatar
+          ) : (
+            <User className="w-4 h-4 text-[#A69485]" />
+          )}
         </div>
         <div className="min-w-0 flex-1 text-left">
           <div className="flex items-center justify-between gap-1.5">
@@ -755,6 +820,14 @@ export default function DuelView({
                 {copied === 'link' ? <Check className="w-4 h-4 text-[#79B96B]" /> : <LinkIcon className="w-4 h-4" />}
                 {copied === 'link' ? 'Link copied!' : 'Copy invite link'}
               </motion.button>
+              <motion.button
+                onClick={shareDuel}
+                whileTap={{ scale: 0.96 }}
+                className="px-5 py-3 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_3px_0_#AF324B] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Share2 className="w-4 h-4" />
+                Share invite
+              </motion.button>
             </div>
 
             <div className="mt-6 pt-4 border-t border-[#E7DCCB] flex items-center justify-center gap-1.5">
@@ -831,7 +904,16 @@ export default function DuelView({
             </div>
             <div>
               <div className="flex items-center justify-center gap-1.5 text-[11px] font-logo font-extrabold text-[#8B72C9] uppercase tracking-wider mb-2.5">
-                {opponent?.avatar ?? '❔'} {opponent?.username ?? 'Opponent'}'s colors
+                {opponent?.avatar ? (
+                  <span className="w-6 h-6 rounded-full bg-white border border-[#E7DCCB] grid place-items-center text-[11px] select-none">
+                    {opponent.avatar}
+                  </span>
+                ) : (
+                  <span className="w-6 h-6 rounded-full bg-white border border-[#E7DCCB] grid place-items-center">
+                    <User className="w-3 h-3 text-[#A69485]" />
+                  </span>
+                )}
+                {opponent?.username ?? 'Opponent'}'s colors
               </div>
               {renderOpponentBoard()}
             </div>
@@ -842,7 +924,7 @@ export default function DuelView({
             <AttemptKeys maxAttempts={duel.attempts_limit} usedAttempts={me?.attempts ?? 0} />
             {me?.status === 'won' && opponent?.status === 'playing' && (
               <p className="text-xs font-display font-bold text-[#79B96B] bg-[#EAF5E7] border border-[#BFE3C9] px-3.5 py-2 rounded-full">
-                🎉 You solved it! Waiting for {opponent?.username ?? 'your friend'} to finish…
+                You solved it! Waiting for {opponent?.username ?? 'your friend'} to finish…
               </p>
             )}
             {me?.status === 'lost' && opponent?.status === 'playing' && (
@@ -875,7 +957,6 @@ export default function DuelView({
             attempts={me?.attempts ?? 0}
             timeMs={me?.time_ms ?? null}
             opponentName={opponent?.username ?? 'your friend'}
-            opponentAvatar={opponent?.avatar ?? '🧑'}
             rewards={
               duelRewards(
                 duel.difficulty,

@@ -25,7 +25,7 @@ const BADGE_ICONS: Record<Achievement['iconType'], typeof Award> = {
   'star': Star,
 };
 
-const AVATAR_OPTIONS = ['🥇', '🦊', '🐻', '🦉', '🐸'];
+const AVATAR_OPTIONS = ['🦊', '🐻', '🦉', '🐸', '🐱'];
 
 export default function ProfileView({
   onNavigate,

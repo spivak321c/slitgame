@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Coins, ArrowLeft, ShoppingBag, Gift, Check } from 'lucide-react';
+import { Coins, ArrowLeft, ShoppingBag, Gift, Check, PackageOpen } from 'lucide-react';
 import { useState } from 'react';
 import type { ScreenType, ShopItem, StickerRarity } from '../types';
 import { SHOP_CATALOG, RARITY_STYLES, MYSTERY_BOX_PRICE, MYSTERY_BOX_ODDS } from '../types';
@@ -64,7 +64,9 @@ export default function ShopView({
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-2xl">🎉</span>
+              <span className="w-8 h-8 rounded-lg bg-white/70 border border-[#8B72C9]/30 flex items-center justify-center text-[#8B72C9]">
+                <PackageOpen className="w-4.5 h-4.5" />
+              </span>
               <h3 className="font-logo font-extrabold text-base text-[#3D342F]">Mystery Box</h3>
             </div>
             <p className="text-xs text-[#6F625B] font-display mb-2">
@@ -92,7 +94,7 @@ export default function ShopView({
             className="shrink-0 flex flex-col items-center justify-center w-24 py-3 bg-[#8B72C9] hover:bg-[#7A5FB5] text-white rounded-2xl shadow-[0_3px_0_#5A4599] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             <Gift className="w-5 h-5 mb-0.5" />
-            <span className="font-mono text-xs font-bold">{MYSTERY_BOX_PRICE} 🪙</span>
+            <span className="font-mono text-xs font-bold flex items-center gap-1">{MYSTERY_BOX_PRICE} <Coins className="w-3.5 h-3.5 text-[#F2B84B]" /></span>
           </motion.button>
         </div>
       </motion.div>

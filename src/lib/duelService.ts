@@ -10,7 +10,7 @@
  */
 
 import { supabase, isSupabaseConfigured, ensureAnonymousSession } from './supabase';
-import type { DuelDifficulty, DuelSnapshot } from './duelTypes';
+import type { DuelDifficulty, DuelSnapshot, RecentOpponent } from './duelTypes';
 
 export type DuelErrorCode =
   | 'offline'
@@ -201,6 +201,39 @@ export async function fetchServerProfile(): Promise<ServerPlayerRow | null> {
     username: data.username,
     avatar: data.avatar,
   };
+}
+
+/**
+ * Phase 4 — the players you've dueled most recently (dashboard "Recent
+ * Rivals" strip). Backed by the `recent_opponents` SECURITY DEFINER RPC,
+ * which only ever returns finished duels we belong to. Best-effort:
+ * returns [] offline / on error (the caller keeps its cached copy).
+ */
+export async function fetchRecentOpponents(): Promise<RecentOpponent[]> {
+  if (!supabase || !isSupabaseConfigured) return [];
+  const playerId = await ensureAnonymousSession();
+  if (!playerId) return [];
+  const { data, error } = await supabase.rpc('recent_opponents');
+  if (error) {
+    console.warn('[duel] fetchRecentOpponents failed:', error.message);
+    return [];
+  }
+  const rows = (data ?? []) as {
+    opponent_id: string;
+    username: string;
+    avatar: string;
+    difficulty: DuelDifficulty;
+    duel_id: string;
+    finished_at: string | null;
+  }[];
+  return rows.map(r => ({
+    opponentId: r.opponent_id,
+    username: r.username,
+    avatar: r.avatar,
+    difficulty: r.difficulty,
+    duelId: r.duel_id,
+    finishedAt: r.finished_at,
+  }));
 }
 
 /** Full snapshot for a duel we belong to (used on load / reconnect). */

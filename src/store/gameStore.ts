@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import type { RecentOpponent } from '../lib/duelTypes';
 import {
   type PlayerProfile,
   type Achievement,
@@ -25,7 +26,7 @@ export const DEFAULT_PROFILE: PlayerProfile = {
   coins: STARTING_COINS,
   xp: 0,
   username: 'paperpilot',
-  avatar: '🥇',
+  avatar: '🦊',
   gamesPlayed: 0,
   gamesWon: 0,
   duelsPlayed: 0,
@@ -72,6 +73,10 @@ interface GameStoreState {
   ownedStickers: string[];
   equippedMascotItem: string | null;
   dyslexiaFont: boolean;
+  // Phase 4 — cached rivals for the dashboard "Recent Rivals" strip.
+  // The server is the source of truth; this is a best-effort offline
+  // mirror refreshed whenever the duel screen / dashboard loads.
+  recentOpponents: RecentOpponent[];
   setProfile: (updater: Updater<PlayerProfile>) => void;
   setCoinHistory: (updater: Updater<CoinLogEntry[]>) => void;
   setAchievements: (updater: Updater<Achievement[]>) => void;
@@ -85,6 +90,7 @@ interface GameStoreState {
   addOwnedSticker: (id: string) => void;
   setEquippedMascotItem: (id: string | null) => void;
   toggleDyslexiaFont: () => void;
+  setRecentOpponents: (opponents: RecentOpponent[]) => void;
 }
 
 export const useGameStore = create<GameStoreState>()(
@@ -102,6 +108,7 @@ export const useGameStore = create<GameStoreState>()(
       ownedStickers: [],
       equippedMascotItem: null,
       dyslexiaFont: false,
+      recentOpponents: [],
       setProfile: (updater) =>
         set((s) => ({ profile: resolve(updater, s.profile) })),
       setCoinHistory: (updater) =>
@@ -133,6 +140,8 @@ export const useGameStore = create<GameStoreState>()(
       setEquippedMascotItem: (id) => set({ equippedMascotItem: id }),
       toggleDyslexiaFont: () =>
         set((s) => ({ dyslexiaFont: !s.dyslexiaFont })),
+      setRecentOpponents: (opponents) =>
+        set({ recentOpponents: opponents.slice(0, 12) }),
     }),
     {
       name: 'slotword-save-v1',
@@ -152,6 +161,7 @@ export const useGameStore = create<GameStoreState>()(
         ownedStickers: s.ownedStickers,
         equippedMascotItem: s.equippedMascotItem,
         dyslexiaFont: s.dyslexiaFont,
+        recentOpponents: s.recentOpponents,
       }),
       // Achievement catalog always comes from code (so newly shipped
       // achievements appear for returning players); only unlock state is
@@ -185,6 +195,7 @@ export const useGameStore = create<GameStoreState>()(
           ownedStickers: saved.ownedStickers ?? [],
           equippedMascotItem: saved.equippedMascotItem ?? null,
           dyslexiaFont: saved.dyslexiaFont ?? false,
+          recentOpponents: saved.recentOpponents ?? [],
           achievements: current.achievements.map((a) => {
             const match = savedAchievements.find((s) => s.id === a.id);
             return match

@@ -69,6 +69,16 @@ export interface DuelOutcome {
   rewards: DuelRewards;
 }
 
+/** Phase 4 — a rival from a finished duel, for the "Recent Rivals" strip. */
+export interface RecentOpponent {
+  opponentId: string;
+  username: string;
+  avatar: string;
+  difficulty: DuelDifficulty;
+  duelId: string;
+  finishedAt: string | null;
+}
+
 /**
  * Reward table — mirrors settle_duel in the migration exactly.
  * Winner: 2× difficulty coins + difficulty XP · loser: 10/20 · draw: 10/30.

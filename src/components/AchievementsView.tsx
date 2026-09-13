@@ -18,11 +18,11 @@ const ACCENTS: Record<Achievement['iconType'], string> = {
 };
 
 const CANDY: Record<Achievement['iconType'], [string, string]> = {
-  'tile': ['#A78BFA', '#7C3AED'],
-  'bolt': ['#FDE047', '#F59E0B'],
-  'shield': ['#7DD3FC', '#0284C7'],
-  'coins': ['#FDA4AF', '#E11D48'],
-  'star': ['#86EFAC', '#16A34A'],
+  'tile': ['#A78BFA', '#8B72C9'],
+  'bolt': ['#F2C974', '#D99B28'],
+  'shield': ['#AEE0F6', '#65B9E8'],
+  'coins': ['#FFC4AF', '#F28C6F'],
+  'star': ['#A7DF9E', '#79B96B'],
 };
 
 const BADGE_ICONS: Record<Achievement['iconType'], typeof Award> = {

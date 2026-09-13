@@ -182,9 +182,9 @@ export function daysBetween(a: string, b: string): number {
 // ── Daily Quest Definitions ───────────────────────────────────────────
 
 export const DAILY_QUESTS: Omit<Quest, 'progress' | 'claimed'>[] = [
-  { id: 'solve-2', title: 'Word Solver', description: 'Solve 2 puzzles today', goal: 2, reward: 30, icon: '🎮' },
-  { id: 'win-duel', title: 'Duel Hero', description: 'Win 1 duel today', goal: 1, reward: 50, icon: '⚔️' },
-  { id: 'use-vowels', title: 'Vowel Power', description: 'Use 15 vowels in guesses', goal: 15, reward: 25, icon: '🔤' },
+  { id: 'solve-2', title: 'Word Solver', description: 'Solve 2 puzzles today', goal: 2, reward: 30, icon: 'gamepad' },
+  { id: 'win-duel', title: 'Duel Hero', description: 'Win 1 duel today', goal: 1, reward: 50, icon: 'swords' },
+  { id: 'use-vowels', title: 'Vowel Power', description: 'Use 15 vowels in guesses', goal: 15, reward: 25, icon: 'letters' },
 ];
 
 // ── Shop Catalog (fun-only, no real money) ────────────────────────────

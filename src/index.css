@@ -124,3 +124,42 @@ body {
   }
 }
 
+/* ── Phase 4: Accessibility ──────────────────────────────────────────── */
+
+/* Visible, high-contrast keyboard focus ring on every interactive
+   element. `:focus` is not enough — `:focus-visible` only triggers for
+   keyboard / assistive-tech focus, so mouse clicks stay clean. */
+:focus-visible {
+  outline: 3px solid #F28C6F;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Color-blind-safe tile-state indicators: a small corner glyph on each
+   evaluated tile that means the same thing regardless of color.
+   ✓ correct · ◐ present · • absent. Hidden visually-visible until the
+   tile resolves, then fades in with the flip. */
+.tile-state-glyph {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 800;
+  opacity: 0.9;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Keep interactive elements ≥48px on coarse pointers (Phase 3 already
+   enforces this via JuicyButton; this is a safety net for raw buttons). */
+@media (pointer: coarse) {
+  button,
+  [role='button'] {
+    min-height: 48px;
+  }
+  button {
+    min-width: 48px;
+  }
+}
+

@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { ArrowLeft, BookOpen } from 'lucide-react';
+import { ArrowLeft, BookOpen, Lock, ShoppingBag } from 'lucide-react';
 import type { ScreenType, ShopItem, StickerRarity } from '../types';
 import { SHOP_CATALOG, RARITY_STYLES } from '../types';
 
@@ -92,7 +92,9 @@ export default function CollectionView({ onNavigate, ownedStickers }: Collection
                           </span>
                         </>
                       ) : (
-                        <span className="text-2xl opacity-30">❓</span>
+                        <span className="w-7 h-7 rounded-lg bg-[#F4EBDD] border border-[#E7DCCB] flex items-center justify-center">
+                          <Lock className="w-3.5 h-3.5 text-[#998D85]" />
+                        </span>
                       )}
                     </div>
                   );
@@ -105,8 +107,9 @@ export default function CollectionView({ onNavigate, ownedStickers }: Collection
 
       {totalOwned === 0 && (
         <div className="mt-6 p-5 bg-[#FAF4EA] border border-dashed border-[#EADFCB] rounded-2xl text-center">
+          <ShoppingBag className="w-6 h-6 text-[#A69485] mx-auto mb-2" />
           <p className="text-sm text-[#6F625B] font-display">
-            Your sticker book is empty! Visit the shop to start collecting. 🛍️
+            Your sticker book is empty! Visit the shop to start collecting.
           </p>
           <button
             onClick={() => onNavigate('shop')}

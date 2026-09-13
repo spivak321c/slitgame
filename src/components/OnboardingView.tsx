@@ -5,20 +5,16 @@ import {
   ArrowLeft,
   Check,
   Delete,
-  Sparkles,
   Lightbulb,
-  PartyPopper,
+  UserRound,
 } from 'lucide-react';
 import { sound } from '../utils/audio';
 import { calculateLetterStates } from '../types';
+import MascotBubble from './MascotBubble';
 
 interface OnboardingViewProps {
   onComplete: (username: string, avatar: string) => void;
 }
-
-// ── Step 1 mascot intro uses a static emoji placeholder. The real
-//    animated SVG fox mascot ("Slit") lands in Phase 3. ──────────────────
-const MASCOT_EMOJI = '🦊';
 
 // ── Step 2 interactive tutorial ────────────────────────────────────────
 // The demo word is revealed so kids can focus on learning the colors,
@@ -67,7 +63,7 @@ export default function OnboardingView({ onComplete }: OnboardingViewProps) {
   }, []);
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 sm:py-10">
+    <div className="max-w-2xl mx-auto px-4 py-6 sm:py-10 min-h-[calc(100dvh-7rem)] flex flex-col justify-center">
       {/* Step indicator */}
       <div className="flex items-center justify-center gap-2 mb-8">
         {STEP_LABELS.map((label, i) => (
@@ -108,30 +104,25 @@ export default function OnboardingView({ onComplete }: OnboardingViewProps) {
   );
 }
 
-// ═══ STEP 1 — Meet the mascot (placeholder) ═══════════════════════════
+// ═══ STEP 1 — Meet the mascot ═════════════════════════════════════════
 function Step1Mascot({ onNext }: { onNext: () => void }) {
   return (
     <div className="flex flex-col items-center text-center">
       <motion.div
-        initial={{ scale: 0.3, opacity: 0, rotate: -10 }}
-        animate={{ scale: 1, opacity: 1, rotate: 0 }}
+        initial={{ opacity: 0, y: 12, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', stiffness: 260, damping: 18 }}
-        className="w-28 h-28 sm:w-32 sm:h-32 rounded-[32px] bg-gradient-to-br from-[#FDECE7] to-[#FCD8CD] border-2 border-[#FADCD5] flex items-center justify-center text-6xl sm:text-7xl shadow-raised mb-6"
+        className="mb-6"
       >
-        {MASCOT_EMOJI}
+        <MascotBubble mood="excited" level={1} message="Hi! I'm Slit the fox!" />
       </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
-        className="bg-[#FFFCF7] border-2 border-[#E7DCCB] rounded-3xl p-5 sm:p-6 shadow-card max-w-md mb-8 relative"
+        className="max-w-md mb-8"
       >
-        {/* Speech bubble tail */}
-        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#FFFCF7] border-l-2 border-t-2 border-[#E7DCCB] rotate-45" />
-        <p className="font-logo font-extrabold text-lg text-[#3D342F] mb-2">
-          Hi! I'm Slit the fox! 🦊
-        </p>
         <p className="text-sm text-[#6F625B] leading-relaxed">
           Welcome to <strong>Slotword</strong> — a cozy word-guessing game. I'll be
           your buddy every step of the way. Let's learn how to play in two quick steps!
@@ -252,7 +243,7 @@ function Step2Tutorial({ onNext, onBack }: { onNext: () => void; onBack: () => v
             whileTap={{ scale: 0.96 }}
             className="px-5 py-3 bg-[#F2B84B] hover:bg-[#E5A92F] text-white font-display font-extrabold text-sm rounded-xl shadow-[0_3px_0_#C48F1F] transition-all flex items-center gap-2 cursor-pointer"
           >
-            <Sparkles className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4" />
             Now you try!
           </motion.button>
         </div>
@@ -349,7 +340,7 @@ function Step2Tutorial({ onNext, onBack }: { onNext: () => void; onBack: () => v
             >
               <p className="text-sm text-[#6F625B] font-display">
                 {playerGuess === TUTORIAL_WORD
-                  ? '🎉 You solved it! All green means you got every letter right.'
+                  ? 'You solved it! All green means you got every letter right.'
                   : 'Nice! See how each tile shows a different color? That tells you which letters are in the word and where.'}
               </p>
               <motion.button
@@ -395,7 +386,7 @@ function Step3Identity({
   return (
     <div className="flex flex-col items-center text-center">
       <div className="flex items-center gap-2 mb-4">
-        <PartyPopper className="w-5 h-5 text-[#E45C75]" />
+        <UserRound className="w-5 h-5 text-[#E45C75]" />
         <h2 className="font-logo font-extrabold text-xl text-[#3D342F]">Make it Yours</h2>
       </div>
       <p className="text-sm text-[#6F625B] font-display mb-5 max-w-sm">

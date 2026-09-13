@@ -56,9 +56,9 @@ export default function ChestCard({ lastOpened, onOpen }: ChestCardProps) {
         <motion.div
           animate={ready ? { rotate: [0, -5, 5, -3, 0], scale: [1, 1.08, 1] } : {}}
           transition={ready ? { duration: 2, repeat: Infinity, repeatDelay: 1 } : {}}
-          className="w-12 h-12 rounded-2xl bg-white/70 border border-[#F2C974] flex items-center justify-center text-2xl shrink-0"
+          className="w-12 h-12 rounded-2xl bg-white/70 border border-[#F2C974] flex items-center justify-center text-[#D4960F] shrink-0"
         >
-          🎁
+          <Gift className="w-7 h-7" />
         </motion.div>
         <div className="flex-1 min-w-0">
           <h4 className="font-logo font-extrabold text-sm text-[#3D342F]">Daily Chest</h4>
