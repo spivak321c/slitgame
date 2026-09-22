@@ -193,7 +193,7 @@ function Step2Tutorial({ onNext, onBack }: { onNext: () => void; onBack: () => v
 
       {/* Demo board */}
       {phase === 'demo' && (
-        <div className="mb-5">
+        <div className="mb-5 w-full">
           <p className="text-xs text-[#6F625B] font-display mb-3">
             Watch this guess: <strong>{DEMO_GUESS}</strong>
           </p>
@@ -213,7 +213,7 @@ function Step2Tutorial({ onNext, onBack }: { onNext: () => void; onBack: () => v
           </div>
 
           {/* Color legend with annotations */}
-          <div className="space-y-2 max-w-sm mx-auto text-left mb-5">
+          <div className="space-y-2 max-w-sm mx-auto text-left mb-5 w-full">
             {demoStates.map((st, i) => (
               <motion.div
                 key={i}
@@ -282,33 +282,33 @@ function Step2Tutorial({ onNext, onBack }: { onNext: () => void; onBack: () => v
 
           {/* Mini keyboard */}
           {!submitted && (
-            <div className="max-w-sm mx-auto">
-              <div className="flex justify-center gap-1 my-1">
+            <div className="max-w-sm w-full mx-auto">
+              <div className="osk-row flex gap-1 my-1 w-full">
                 {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map(k => (
                   <button
                     key={k}
                     onClick={() => handleKey(k)}
-                    className="w-8 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
+                    className="flex-1 min-w-0 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
                   >
                     {k}
                   </button>
                 ))}
               </div>
-              <div className="flex justify-center gap-1 my-1">
+              <div className="osk-row flex gap-1 my-1 w-full">
                 {['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'].map(k => (
                   <button
                     key={k}
                     onClick={() => handleKey(k)}
-                    className="w-8 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
+                    className="flex-1 min-w-0 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
                   >
                     {k}
                   </button>
                 ))}
               </div>
-              <div className="flex justify-center gap-1 my-1">
+              <div className="osk-row flex gap-1 my-1 w-full">
                 <button
                   onClick={submit}
-                  className="px-2.5 h-11 rounded-lg bg-[#79B96B] hover:bg-[#5E9A50] text-white font-logo font-bold text-[10px] cursor-pointer active:scale-90 transition-transform"
+                  className="flex-[1.5] h-11 rounded-lg bg-[#79B96B] hover:bg-[#5E9A50] text-white font-logo font-bold text-[10px] cursor-pointer active:scale-90 transition-transform"
                 >
                   ENTER
                 </button>
@@ -316,14 +316,14 @@ function Step2Tutorial({ onNext, onBack }: { onNext: () => void; onBack: () => v
                   <button
                     key={k}
                     onClick={() => handleKey(k)}
-                    className="w-8 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
+                    className="flex-1 min-w-0 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
                   >
                     {k}
                   </button>
                 ))}
                 <button
                   onClick={() => handleKey('DELETE')}
-                  className="px-2.5 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold cursor-pointer active:scale-90 transition-transform flex items-center justify-center"
+                  className="flex-1 min-w-0 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold cursor-pointer active:scale-90 transition-transform flex items-center justify-center"
                 >
                   <Delete className="w-4 h-4" />
                 </button>
