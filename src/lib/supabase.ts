@@ -10,7 +10,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
  */
 
 const url = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Accepts either the classic anon key or the newer sb_publishable_ key
+// (Supabase's publishable keys are drop-in replacements in supabase-js).
+const anonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const isSupabaseConfigured = Boolean(url && anonKey);
 

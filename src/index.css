@@ -163,3 +163,16 @@ body {
   }
 }
 
+/* ── Contained game-board responsiveness ─────────────────────────────── */
+
+/* The board tile size is computed at runtime by useBoardFit to fit the
+   available space exactly (wordle.global style) — no CSS caps needed. */
+
+/* Touch devices: QWERTY keys keep the ≥48px touch HEIGHT but must be allowed
+   to stay narrow — ten 48px-wide keys cannot fit a 390px phone row. */
+@media (pointer: coarse) {
+  .osk-row button {
+    min-width: 0;
+  }
+}
+

@@ -21,6 +21,7 @@ import { ScreenType, DIFFICULTIES, type Difficulty } from '../types';
 import { sound } from '../utils/audio';
 import { useGameStore, useSessionStore } from '../store/gameStore';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { isEnglishWord, loadWordBank } from '../lib/dictionary';
 import {
   createDuel,
   joinDuel,
@@ -42,7 +43,7 @@ import {
 } from '../lib/duelTypes';
 import DuelResultSheet from './DuelResultSheet';
 import CreateDuelModal from './CreateDuelModal';
-import AttemptKeys from './AttemptKeys';
+import { useBoardFit } from '../hooks/useBoardFit';
 
 type DuelPhase = 'lobby' | 'waiting' | 'live' | 'result';
 
@@ -99,6 +100,17 @@ export default function DuelView({
   const online = isSupabaseConfigured && (!authReady || playerId !== null);
   const myTurnActive = phase === 'live' && me?.status === 'playing' && !submitting;
 
+  // Tile size that makes the live board fit the available height — no
+  // internal scroll, exactly like wordle.global.
+  const { ref: liveBoardRef, size: liveTile } = useBoardFit(
+    duel?.attempts_limit ?? 6,
+    duel?.word_length ?? 5,
+    8,
+    26,
+    68,
+    160
+  );
+
   // ── Snapshot application ────────────────────────────────────────────
   const applySnapshot = useCallback(
     (snap: DuelSnapshot) => {
@@ -134,8 +146,28 @@ export default function DuelView({
         if (!cancelled) setActiveDuel(null);
       }
       if (joinCode && !cancelled) {
-        setJoinInput(joinCode.toUpperCase());
         onJoinCodeHandled?.();
+        // Auto-join straight from the share link — a friend tapping
+        // ?duel=CODE lands in the duel with zero extra steps. On failure
+        // (finished, full, offline) the code stays pre-filled with the
+        // error shown so they can retry from the lobby.
+        setBusy('joining');
+        try {
+          const { duelId } = await joinDuel(
+            joinCode.toUpperCase(),
+            profile.username,
+            profile.avatar
+          );
+          const snap = await getDuelState(duelId);
+          if (cancelled) return;
+          setActiveDuel(duelId);
+          if (snap) applySnapshot(snap);
+          sound.playRewardSound();
+        } catch (err) {
+          if (!cancelled) showError(err);
+        } finally {
+          if (!cancelled) setBusy(null);
+        }
       }
     })();
     return () => {
@@ -148,6 +180,7 @@ export default function DuelView({
   // Fires once per challenge: waits for the session handshake, creates a
   // duel at the requested difficulty, and lands in the waiting room.
   const autoCreateBusyRef = useRef(false);
+  const validatingRef = useRef(false);
   useEffect(() => {
     if (!authReady || !autoCreateDifficulty || autoCreateBusyRef.current) return;
     autoCreateBusyRef.current = true;
@@ -324,7 +357,13 @@ export default function DuelView({
     handleCreate(duel.difficulty);
   };
 
-  const submitGuess = async () => {
+  // Preload the dictionary chunk for this duel's length so the first ENTER
+  // resolves instantly (fetched in the background, then cached forever).
+  useEffect(() => {
+    void loadWordBank(duel?.word_length ?? 5);
+  }, [duel?.word_length]);
+
+  const submitGuess = () => {
     if (!snapshot || !activeDuelId || submitting) return;
     if (currentGuess.length < snapshot.duel.word_length) {
       sound.playShakeSound();
@@ -332,19 +371,42 @@ export default function DuelView({
       setTimeout(() => setShake(false), 400);
       return;
     }
-    setSubmitting(true);
-    setError(null);
-    try {
-      const snap = await submitDuelGuess(activeDuelId, currentGuess);
-      const newest = snap.myGuesses[snap.myGuesses.length - 1];
-      newest?.colors.forEach((st, idx) => sound.playTileReveal(idx * 0.08, st));
-      applySnapshot(snap);
-      setCurrentGuess('');
-    } catch (err) {
-      showError(err);
-    } finally {
-      setSubmitting(false);
-    }
+    const duelId = activeDuelId;
+    const wordLength = snapshot.duel.word_length;
+    const guess = currentGuess.trim().toUpperCase();
+
+    // Client-side dictionary check, mirroring PuzzleView: the word bank for
+    // this length is preloaded, so this resolves in ~0ms. The ref guards
+    // against a double-submit while loading; the server re-validates anyway.
+    void (async () => {
+      if (validatingRef.current) return;
+      validatingRef.current = true;
+      let valid = false;
+      try {
+        valid = await isEnglishWord(wordLength, guess);
+      } finally {
+        validatingRef.current = false;
+      }
+      if (!valid) {
+        sound.playShakeSound();
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+        return;
+      }
+      setSubmitting(true);
+      setError(null);
+      try {
+        const snap = await submitDuelGuess(duelId, guess);
+        const newest = snap.myGuesses[snap.myGuesses.length - 1];
+        newest?.colors.forEach((st, idx) => sound.playTileReveal(idx * 0.08, st));
+        applySnapshot(snap);
+        setCurrentGuess('');
+      } catch (err) {
+        showError(err);
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   };
 
   const handleKeyPress = (key: string) => {
@@ -416,14 +478,14 @@ export default function DuelView({
     return null;
   };
 
-  const renderMyBoard = () => {
+  const renderMyBoard = (tileSize?: number | null) => {
     if (!snapshot) return null;
     const { word_length: wordLen, attempts_limit: rows } = snapshot.duel;
     const guesses = snapshot.myGuesses;
     const currentRow = me?.status === 'playing' ? guesses.length : -1;
 
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {Array.from({ length: rows }).map((_, rIdx) => {
           const isCurrent = rIdx === currentRow;
           const entry = rIdx < guesses.length ? guesses[rIdx] : null;
@@ -433,7 +495,7 @@ export default function DuelView({
             ? currentGuess.padEnd(wordLen, ' ').split('')
             : Array(wordLen).fill(' ');
           return (
-            <div key={rIdx} className="flex gap-1 sm:gap-1.5 justify-center">
+            <div key={rIdx} className="flex gap-2 justify-center">
               {letters.map((letter, cIdx) => {
                 const state = entry ? entry.colors[cIdx] : undefined;
                 const c = tileColors(state);
@@ -458,8 +520,12 @@ export default function DuelView({
                           }
                     }
                     transition={{ duration: 0.5, delay: cIdx * 0.08, ease: 'easeInOut' }}
-                    className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border-2 font-logo font-bold text-base sm:text-lg flex items-center justify-center shadow-xs select-none"
-                    style={{ transformStyle: 'preserve-3d' }}
+                    className="game-tile relative rounded-lg sm:rounded-xl border-2 font-logo font-bold text-lg sm:text-xl flex items-center justify-center shadow-xs select-none"
+                    style={{
+                      width: tileSize ?? 44,
+                      height: tileSize ?? 44,
+                      fontSize: tileSize ? Math.max(15, Math.round(tileSize * 0.45)) : undefined,
+                    }}
                   >
                     {filled ? letter : ''}
                     {/* Phase 4 — color-blind-safe glyph: ✓ correct, ◐ present, · absent */}
@@ -479,45 +545,6 @@ export default function DuelView({
     );
   };
 
-  const renderOpponentBoard = () => {
-    if (!snapshot) return null;
-    const { word_length: wordLen, attempts_limit: rows } = snapshot.duel;
-    const oppColors = opponent?.colors ?? [];
-    return (
-      <div className="space-y-1.5">
-        {Array.from({ length: rows }).map((_, rIdx) => {
-          const rowColors = oppColors[rIdx];
-          return (
-            <div key={rIdx} className="flex gap-1 sm:gap-1.5 justify-center">
-              {Array.from({ length: wordLen }).map((_, cIdx) => {
-                const state = rowColors?.[cIdx];
-                const c = tileColors(state);
-                return (
-                  <motion.div
-                    key={cIdx}
-                    initial={false}
-                    animate={
-                      c
-                        ? {
-                            scale: [0.6, 1.15, 1],
-                            backgroundColor: c.bg,
-                            borderColor: c.border,
-                            opacity: 1,
-                          }
-                        : { backgroundColor: '#F4EBDD', borderColor: '#E7DCCB', opacity: 0.6, scale: 1 }
-                    }
-                    transition={{ type: 'spring', stiffness: 400, damping: 22, delay: cIdx * 0.05 }}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border-2 shadow-xs"
-                  />
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
   const renderKeyboard = () => (
     <div className={`w-full max-w-md mx-auto px-1 ${shake ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}>
       {[
@@ -525,7 +552,7 @@ export default function DuelView({
         ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
         ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'DELETE'],
       ].map((row, rIdx) => (
-        <div key={rIdx} className="flex justify-center gap-1 sm:gap-1.5 my-1">
+        <div key={rIdx} className="osk-row flex justify-center gap-1 sm:gap-1.5 my-1">
           {row.map(key => {
             const isWide = key === 'ENTER' || key === 'DELETE';
             return (
@@ -585,9 +612,14 @@ export default function DuelView({
               <span className="text-[9px] font-mono text-[#A69485] shrink-0">waiting…</span>
             )}
           </div>
+          {/* Chances left while solving; guesses used + time when done.
+              Never the opponent's guesses or colors. */}
           <div className="text-[9.5px] font-mono font-semibold text-[#998D85] mt-0.5">
-            {player ? `${player.attempts} guess${player.attempts === 1 ? '' : 'es'}` : '—'}
-            {player?.time_ms != null && player.status !== 'playing' ? ` · ${fmtMs(player.time_ms)}` : ''}
+            {player
+              ? player.status !== 'playing'
+                ? `${player.attempts} guess${player.attempts === 1 ? '' : 'es'}${player.time_ms != null ? ` · ${fmtMs(player.time_ms)}` : ''}`
+                : `${Math.max(0, (duel?.attempts_limit ?? 6) - player.attempts)} chance${(duel?.attempts_limit ?? 6) - player.attempts === 1 ? '' : 's'} left`
+              : '—'}
           </div>
         </div>
       </div>
@@ -596,7 +628,7 @@ export default function DuelView({
 
   // ═══ RENDER ════════════════════════════════════════════════════════
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto px-4">
       {/* Error banner */}
       <AnimatePresence>
         {error && (
@@ -611,7 +643,7 @@ export default function DuelView({
             <button
               type="button"
               onClick={() => setError(null)}
-              className="px-2 py-1 text-[10px] font-display font-extrabold text-[#E45C75] hover:bg-[#FCE8EC] rounded-lg transition-colors cursor-pointer shrink-0"
+              className="px-2.5 py-2.5 text-[10px] font-display font-extrabold text-[#E45C75] hover:bg-[#FCE8EC] rounded-lg transition-colors cursor-pointer shrink-0"
             >
               OK
             </button>
@@ -621,11 +653,11 @@ export default function DuelView({
 
       {/* ═══ 1. LOBBY — create or join ═══════════════════════════════ */}
       {phase === 'lobby' && (
-        <div>
+        <div className="py-6">
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => onNavigate('dashboard')}
-              className="flex items-center gap-1.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 -ml-1 px-2.5 py-2.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               Lobby
@@ -654,7 +686,7 @@ export default function DuelView({
               </p>
               <button
                 onClick={() => onNavigate('play')}
-                className="px-5 py-2.5 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_3px_0_#AF324B] transition-all cursor-pointer"
+                className="px-5 py-3.5 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_3px_0_#AF324B] transition-all cursor-pointer"
               >
                 Play Solo
               </button>
@@ -719,7 +751,7 @@ export default function DuelView({
                     onClick={handleJoin}
                     disabled={joinInput.length !== 6 || busy !== null}
                     whileTap={{ scale: 0.96 }}
-                    className={`px-5 py-3 font-display font-extrabold text-sm rounded-2xl transition-all whitespace-nowrap ${
+                    className={`px-5 py-3.5 font-display font-extrabold text-sm rounded-2xl transition-all whitespace-nowrap ${
                       joinInput.length === 6 && !busy
                         ? 'bg-[#F28C6F] hover:bg-[#E1774F] text-white shadow-[0_3px_0_#C96A45] cursor-pointer'
                         : 'bg-[#F4EBDD] text-[#A69485] cursor-not-allowed'
@@ -753,11 +785,11 @@ export default function DuelView({
 
       {/* ═══ 2. WAITING ROOM — share the code ═══════════════════════ */}
       {phase === 'waiting' && duel && (
-        <div className="max-w-xl mx-auto">
+        <div className="max-w-xl mx-auto py-6 w-full">
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={handleCancelDuel}
-              className="flex items-center gap-1.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 -ml-1 px-2.5 py-2.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               Cancel duel
@@ -802,7 +834,7 @@ export default function DuelView({
               <motion.button
                 onClick={() => copyToClipboard(duel.code, 'code')}
                 whileTap={{ scale: 0.96 }}
-                className="px-5 py-3 bg-[#F2B84B] hover:bg-[#E5A92F] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_3px_0_#C48F1F] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="px-5 py-3.5 bg-[#F2B84B] hover:bg-[#E5A92F] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_3px_0_#C48F1F] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 {copied === 'code' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {copied === 'code' ? 'Code copied!' : 'Copy code'}
@@ -815,7 +847,7 @@ export default function DuelView({
                   )
                 }
                 whileTap={{ scale: 0.96 }}
-                className="px-5 py-3 bg-[#FFFCF7] border-2 border-[#E7DCCB] hover:border-[#F28C6F] text-[#3D342F] font-display font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="px-5 py-3.5 bg-[#FFFCF7] border-2 border-[#E7DCCB] hover:border-[#F28C6F] text-[#3D342F] font-display font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 {copied === 'link' ? <Check className="w-4 h-4 text-[#79B96B]" /> : <LinkIcon className="w-4 h-4" />}
                 {copied === 'link' ? 'Link copied!' : 'Copy invite link'}
@@ -823,7 +855,7 @@ export default function DuelView({
               <motion.button
                 onClick={shareDuel}
                 whileTap={{ scale: 0.96 }}
-                className="px-5 py-3 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_3px_0_#AF324B] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="px-5 py-3.5 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_3px_0_#AF324B] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Share2 className="w-4 h-4" />
                 Share invite
@@ -846,9 +878,9 @@ export default function DuelView({
 
       {/* ═══ 3. LIVE MATCH ═══════════════════════════════════════════ */}
       {phase === 'live' && duel && (
-        <div className="bg-[#FFFCF7] border-2 border-[#E7DCCB] rounded-3xl p-4 sm:p-6 shadow-card">
-          {/* Header: live badge · timer · exit */}
-          <div className="flex items-center justify-between gap-3 pb-4 border-b border-[#E7DCCB] mb-5 flex-wrap">
+        <div className="h-[calc(100dvh-3.125rem)] md:h-[calc(100dvh-4.25rem)] bg-[#FFFCF7] border-2 border-[#E7DCCB] rounded-3xl shadow-card flex flex-col overflow-hidden px-3 sm:px-5 py-3">
+          {/* Header: live badge · timer · exit (fixed) */}
+          <div className="flex-none flex items-center justify-between gap-3 pb-3 border-b border-[#E7DCCB] mb-3 flex-wrap">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#F28C6F] animate-pulse" />
               <span className="text-xs font-bold text-[#F28C6F] uppercase tracking-wider font-display">
@@ -865,13 +897,13 @@ export default function DuelView({
                   <span className="text-[10px] font-display font-bold text-[#6F625B]">Give up?</span>
                   <button
                     onClick={handleForfeit}
-                    className="px-2.5 py-1 bg-[#E45C75] text-white text-[10px] font-display font-extrabold rounded-lg cursor-pointer"
+                    className="px-3 py-2.5 bg-[#E45C75] text-white text-[10px] font-display font-extrabold rounded-lg cursor-pointer"
                   >
                     Yes, forfeit
                   </button>
                   <button
                     onClick={() => setConfirmForfeit(false)}
-                    className="px-2.5 py-1 bg-[#F4EBDD] text-[#3D342F] text-[10px] font-display font-extrabold rounded-lg cursor-pointer"
+                    className="px-3 py-2.5 bg-[#F4EBDD] text-[#3D342F] text-[10px] font-display font-extrabold rounded-lg cursor-pointer"
                   >
                     Keep playing
                   </button>
@@ -879,7 +911,7 @@ export default function DuelView({
               ) : (
                 <button
                   onClick={() => setConfirmForfeit(true)}
-                  className="flex items-center gap-1 text-[10.5px] font-display font-extrabold text-[#A69485] hover:text-[#E45C75] transition-colors cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-2.5 text-[10.5px] font-display font-extrabold text-[#A69485] hover:text-[#E45C75] transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Forfeit
@@ -888,68 +920,55 @@ export default function DuelView({
             </div>
           </div>
 
-          {/* Player chips */}
-          <div className="flex gap-2.5 mb-5">
+          {/* Player chips (fixed) */}
+          <div className="flex-none flex gap-2.5 mb-3">
             {playerChip(me, true, 'You')}
             {playerChip(opponent, false, 'Opponent')}
           </div>
 
-          {/* Boards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-5">
-            <div>
-              <div className="flex items-center justify-center gap-1.5 text-[11px] font-logo font-extrabold text-[#79B96B] uppercase tracking-wider mb-2.5">
-                <User className="w-3.5 h-3.5" /> Your board
-              </div>
-              {renderMyBoard()}
+          {/* Board area: fills the middle. Tiles are sized to fit this exact
+              space, so the grid never needs an internal scroll container. The
+              chip already shows chances left; the slot below only hosts the
+              conditional status messages. */}
+          <div ref={liveBoardRef} className="flex-1 min-h-0 flex flex-col items-center justify-center py-1">
+            <div className="flex w-full flex-col items-center">
+            <div className="flex items-center justify-center gap-1.5 text-[11px] font-logo font-extrabold text-[#79B96B] uppercase tracking-wider mb-2.5">
+              <User className="w-3.5 h-3.5" /> Your board
             </div>
-            <div>
-              <div className="flex items-center justify-center gap-1.5 text-[11px] font-logo font-extrabold text-[#8B72C9] uppercase tracking-wider mb-2.5">
-                {opponent?.avatar ? (
-                  <span className="w-6 h-6 rounded-full bg-white border border-[#E7DCCB] grid place-items-center text-[11px] select-none">
-                    {opponent.avatar}
-                  </span>
-                ) : (
-                  <span className="w-6 h-6 rounded-full bg-white border border-[#E7DCCB] grid place-items-center">
-                    <User className="w-3 h-3 text-[#A69485]" />
-                  </span>
+            {renderMyBoard(liveTile)}
+
+            {/* Conditional status: out-of-guesses notice + claim-forfeit.
+                (Solving now settles the duel instantly, so there is no
+                "waiting for opponent" state to show.) */}
+            {(me?.status === 'lost' && opponent?.status === 'playing') ||
+            (opponentIsStale(opponent) && duel.status === 'active') ? (
+              <div className="flex flex-col items-center gap-2 mt-3 flex-none">
+                {me?.status === 'lost' && opponent?.status === 'playing' && (
+                  <p className="text-xs font-display font-bold text-[#8B6F3B] bg-[#FFF3D6] border border-[#F2C974] px-3.5 py-2 rounded-full">
+                    Out of guesses! {opponent?.username ?? 'Your friend'} is still solving…
+                  </p>
                 )}
-                {opponent?.username ?? 'Opponent'}'s colors
+                {opponentIsStale(opponent) && duel.status === 'active' && (
+                  <button
+                    onClick={handleClaimForfeit}
+                    className="px-4 py-2 bg-[#FDECE7] hover:bg-[#FCD8CD] border border-[#FADCD5] text-[#D96B4C] font-display font-extrabold text-[11px] rounded-xl transition-colors cursor-pointer"
+                  >
+                    {opponent?.left_at ? 'Opponent left — claim your win!' : 'Opponent seems away — claim your win'}
+                  </button>
+                )}
               </div>
-              {renderOpponentBoard()}
+            ) : null}
             </div>
           </div>
 
-          {/* Keys left + claim-forfeit */}
-          <div className="flex flex-col items-center gap-3">
-            <AttemptKeys maxAttempts={duel.attempts_limit} usedAttempts={me?.attempts ?? 0} />
-            {me?.status === 'won' && opponent?.status === 'playing' && (
-              <p className="text-xs font-display font-bold text-[#79B96B] bg-[#EAF5E7] border border-[#BFE3C9] px-3.5 py-2 rounded-full">
-                You solved it! Waiting for {opponent?.username ?? 'your friend'} to finish…
-              </p>
-            )}
-            {me?.status === 'lost' && opponent?.status === 'playing' && (
-              <p className="text-xs font-display font-bold text-[#8B6F3B] bg-[#FFF3D6] border border-[#F2C974] px-3.5 py-2 rounded-full">
-                Out of guesses! {opponent?.username ?? 'Your friend'} is still solving…
-              </p>
-            )}
-            {opponentIsStale(opponent) && duel.status === 'active' && (
-              <button
-                onClick={handleClaimForfeit}
-                className="px-4 py-2 bg-[#FDECE7] hover:bg-[#FCD8CD] border border-[#FADCD5] text-[#D96B4C] font-display font-extrabold text-[11px] rounded-xl transition-colors cursor-pointer"
-              >
-                {opponent?.left_at ? 'Opponent left — claim your win!' : 'Opponent seems away — claim your win'}
-              </button>
-            )}
-          </div>
-
-          {/* Keyboard */}
-          <div className="mt-5">{renderKeyboard()}</div>
+          {/* Keyboard: pinned to the bottom of the duel shell (thumb zone) */}
+          <div className="flex-none mt-2">{renderKeyboard()}</div>
         </div>
       )}
 
       {/* ═══ 4. RESULT ═══════════════════════════════════════════════ */}
       {phase === 'result' && duel && (
-        <div className="py-6 max-w-md mx-auto">
+        <div className="py-6 max-w-md mx-auto w-full">
           <DuelResultSheet
             won={!duel.is_draw && duel.winner_player_id === snapshot?.myPlayerId}
             draw={duel.is_draw}

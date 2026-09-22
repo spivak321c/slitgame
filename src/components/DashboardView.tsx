@@ -397,7 +397,7 @@ export default function DashboardView({
         <motion.button
           onClick={() => onNavigate('leaderboard')}
           whileTap={{ scale: 0.96 }}
-          className="w-full sm:w-auto px-4 py-2.5 text-xs font-display font-extrabold text-[#388FBF] bg-[#E7F5FC] hover:bg-[#D4EFEF] border border-[#D0ECFA] rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0"
+          className="w-full sm:w-auto px-4 py-3 text-xs font-display font-extrabold text-[#388FBF] bg-[#E7F5FC] hover:bg-[#D4EFEF] border border-[#D0ECFA] rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0"
         >
           View Rankings <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
         </motion.button>

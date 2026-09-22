@@ -26,7 +26,7 @@ export default function CollectionView({ onNavigate, ownedStickers }: Collection
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => onNavigate('dashboard')}
-          className="flex items-center gap-1.5 text-[#6F625B] hover:text-[#3D342F] transition-colors text-sm font-display font-bold cursor-pointer"
+          className="flex items-center gap-1.5 -ml-1 px-2.5 py-2.5 text-[#6F625B] hover:text-[#3D342F] transition-colors text-sm font-display font-bold cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
@@ -113,7 +113,7 @@ export default function CollectionView({ onNavigate, ownedStickers }: Collection
           </p>
           <button
             onClick={() => onNavigate('shop')}
-            className="mt-3 px-4 py-2 bg-[#E45C75] hover:bg-[#D34B64] text-white text-xs font-display font-bold rounded-xl cursor-pointer transition-colors"
+            className="mt-3 px-4 py-3 bg-[#E45C75] hover:bg-[#D34B64] text-white text-xs font-display font-bold rounded-xl cursor-pointer transition-colors"
           >
             Go to Shop
           </button>

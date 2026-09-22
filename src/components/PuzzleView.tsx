@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowLeft,
@@ -19,11 +19,11 @@ import {
   DIFFICULTIES,
   DifficultyConfig,
   randomWord,
-  wordsForLength,
   calculateLetterStates,
 } from '../types';
 import { sound } from '../utils/audio';
-import AttemptKeys from './AttemptKeys';
+import { useBoardFit } from '../hooks/useBoardFit';
+import { isEnglishWord, loadWordBank } from '../lib/dictionary';
 
 interface PuzzleViewProps {
   onNavigate: (screen: ScreenType) => void;
@@ -49,6 +49,7 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
   const [status, setStatus] = useState<'playing' | 'won' | 'lost'>('playing');
   const [shake, setShake] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const validatingRef = useRef(false);
 
   const wordLength = difficulty.wordLength;
   const maxAttempts = difficulty.attempts;
@@ -79,17 +80,7 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
     return map;
   }, [guesses, word]);
 
-  const submitGuess = useCallback(() => {
-    if (status !== 'playing') return;
-    const guess = currentGuess.trim().toUpperCase();
-    if (guess.length !== wordLength) return;
-    if (!wordsForLength(wordLength).includes(guess)) {
-      sound.playShakeSound();
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-      return;
-    }
-
+  const submitValidGuess = useCallback((guess: string) => {
     sound.playKeyEnter();
     const nextGuesses = [...guesses, guess];
     setGuesses(nextGuesses);
@@ -115,7 +106,41 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
       onSolve(nextGuesses.length, difficulty.id, false, nextGuesses);
       setTimeout(() => setShowResult(true), 900);
     }
-  }, [status, currentGuess, wordLength, guesses, word, maxAttempts, difficulty.id, onSolve]);
+  }, [guesses, word, maxAttempts, difficulty.id, onSolve]);
+
+  // Preload the dictionary chunk for the current length so the first ENTER of
+  // each difficulty resolves instantly (the async chunk is fetched in the
+  // background on mount / difficulty switch, then cached forever).
+  useEffect(() => {
+    void loadWordBank(wordLength);
+  }, [wordLength]);
+
+  const submitGuess = useCallback(() => {
+    if (status !== 'playing') return;
+    const guess = currentGuess.trim().toUpperCase();
+    if (guess.length !== wordLength) return;
+
+    // Async dictionary check: the word bank for this length is preloaded on
+    // mount/difficulty-change, so this resolves in ~0ms after the first game
+    // of each length. The ref guards against a double-submit while loading.
+    void (async () => {
+      if (validatingRef.current) return;
+      validatingRef.current = true;
+      let valid = false;
+      try {
+        valid = await isEnglishWord(wordLength, guess);
+      } finally {
+        validatingRef.current = false;
+      }
+      if (!valid) {
+        sound.playShakeSound();
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+        return;
+      }
+      submitValidGuess(guess);
+    })();
+  }, [status, currentGuess, wordLength, submitValidGuess]);
 
   const handleKeyPress = useCallback(
     (key: string) => {
@@ -170,6 +195,18 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
 
   const winCoins = difficulty.baseReward + Math.max(0, maxAttempts - guesses.length) * 2;
 
+  // Tile size that makes the whole board fit the available height — no
+  // internal scroll, exactly like wordle.global. No reserve: the "keys left"
+  // strip is gone from this page, so the board owns the full middle.
+  const { ref: boardFitRef, size: tileSize } = useBoardFit(
+    maxAttempts,
+    wordLength,
+    8,
+    28,
+    78,
+    0
+  );
+
   const statusColor: Record<TileResult['status'], string> = {
     correct: 'bg-[#79B96B] border-[#5E9A50] text-white shadow-[0_2px_0_#5E9A50]',
     present: 'bg-[#F2B84B] border-[#D99B28] text-white shadow-[0_2px_0_#D99B28]',
@@ -179,9 +216,9 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-10">
+    <div className="h-full max-w-4xl mx-auto px-3 sm:px-4 pt-3 flex flex-col overflow-hidden">
       {/* Header: back + title + difficulty tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+      <div className="flex-none flex flex-col sm:flex-row sm:items-center gap-3 mb-2 sm:mb-3">
         <div className="flex items-center gap-3">
           <motion.button
             onClick={() => onNavigate('dashboard')}
@@ -201,7 +238,7 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
         </div>
 
         {/* Difficulty selector */}
-        <div className="flex gap-2 sm:ml-auto">
+        <div className="flex gap-1.5 sm:gap-2 sm:ml-auto flex-none items-center">
           {DIFFICULTIES.map(cfg => {
             const isActive = difficulty.id === cfg.id;
             return (
@@ -216,7 +253,9 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
                   }
                 }}
                 whileTap={{ scale: 0.94 }}
-                className={`px-3.5 py-2 rounded-xl border-2 font-display font-extrabold text-xs transition-all cursor-pointer ${
+                title={`${cfg.label} — ${cfg.wordLength} letters · ${cfg.attempts} tries`}
+                aria-label={`${cfg.label} ${cfg.wordLength} letters`}
+                className={`px-3 py-1.5 rounded-xl border-2 font-display font-extrabold text-xs leading-none transition-all cursor-pointer flex items-baseline gap-1 whitespace-nowrap ${
                   isActive
                     ? cfg.id === 'easy'
                       ? 'bg-[#79B96B] border-[#5E9A50] text-white shadow-[0_2px_0_#5E9A50]'
@@ -227,8 +266,8 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
                 }`}
               >
                 {cfg.label}
-                <span className="block text-[9px] font-mono font-bold opacity-80">
-                  {cfg.wordLength} letters · {cfg.attempts} tries
+                <span className={`text-[10px] font-mono font-bold ${isActive ? 'opacity-85' : 'text-[#998D85]'}`}>
+                  {cfg.wordLength}
                 </span>
               </motion.button>
             );
@@ -244,7 +283,7 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-            className="mb-6"
+            className="flex-none mb-2"
           >
             <div className={`relative overflow-hidden rounded-3xl border-2 p-5 sm:p-6 text-left ${
               status === 'won'
@@ -315,14 +354,17 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
         )}
       </AnimatePresence>
 
-      {/* Word grid */}
-      <motion.div
-        key={`${difficulty.id}-${word}`}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`flex justify-center ${shake ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}
-      >
-        <div className={`grid gap-1.5 sm:gap-2 ${wordLength === 4 ? 'grid-cols-4' : wordLength === 5 ? 'grid-cols-5' : 'grid-cols-6'}`}>
+      {/* Board area: fills the middle. Tiles are sized to fit this exact
+          space, so the grid never needs an internal scroll container. */}
+      <div ref={boardFitRef} className="flex-1 min-h-0 flex flex-col items-center justify-center py-2">
+        <div className="flex w-full flex-col items-center">
+        <motion.div
+          key={`${difficulty.id}-${word}`}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`flex justify-center ${shake ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}
+        >
+        <div className={`board-grid grid gap-2 ${wordLength === 4 ? 'grid-cols-4' : wordLength === 5 ? 'grid-cols-5' : 'grid-cols-6'}`}>
           {rows.flatMap((row, rowIdx) =>
             row.map((tile, colIdx) => {
               const shouldFlip =
@@ -363,9 +405,14 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
                         }
                       : { duration: 0.5, delay: colIdx * 0.08, ease: 'easeInOut' }
                   }
-                  className={`w-11 h-11 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center font-logo font-black text-xl sm:text-2xl select-none ${
+                  className={`game-tile rounded-xl flex items-center justify-center font-logo font-black text-xl sm:text-2xl select-none ${
                     statusColor[tile.status] ?? statusColor.empty
                   }`}
+                  style={{
+                    width: tileSize ?? 44,
+                    height: tileSize ?? 44,
+                    fontSize: tileSize ? Math.max(16, Math.round(tileSize * 0.5)) : undefined,
+                  }}
                 >
                   <motion.span
                     key={tile.letter}
@@ -382,19 +429,17 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
           )}
         </div>
       </motion.div>
-
-      <div className="flex justify-center mt-4">
-        <AttemptKeys maxAttempts={maxAttempts} usedAttempts={guesses.length} />
+        </div>
       </div>
 
-      {/* Keyboard */}
-      <div className="mt-6 sm:mt-8">
+      {/* Keyboard: pinned to the bottom of the play shell (thumb zone) */}
+      <div className="flex-none mt-2 pb-1">
         <div className="flex justify-center mb-2 text-[11px] font-display font-bold text-[#998D85] items-center gap-1.5">
           <Keyboard className="w-3.5 h-3.5" /> Type with your real keyboard or tap below
         </div>
         <div className="flex flex-col items-center gap-1.5">
           {KEY_ROWS.map((row, i) => (
-            <div key={i} className="flex gap-1 sm:gap-1.5">
+            <div key={i} className="osk-row flex gap-1 sm:gap-1.5">
               {row.map(key => {
                 const letterKey = key === 'ENTER' || key === 'BACK' ? '' : key;
                 const state = letterKey ? keyboardStates[letterKey] : undefined;

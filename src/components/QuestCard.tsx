@@ -76,7 +76,7 @@ export default function QuestCard({ quest, onClaim }: QuestCardProps) {
         <motion.button
           onClick={() => onClaim(quest.id)}
           whileTap={{ scale: 0.94 }}
-          className="mt-2 w-full py-2 bg-[#79B96B] hover:bg-[#6AA85C] text-white font-display font-bold text-[11px] rounded-lg shadow-[0_2px_0_#5A8E4D] transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[36px]"
+          className="mt-2 w-full py-2 bg-[#79B96B] hover:bg-[#6AA85C] text-white font-display font-bold text-[11px] rounded-lg shadow-[0_2px_0_#5A8E4D] transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[44px]"
         >
           <Check className="w-3.5 h-3.5" />
           Claim Reward

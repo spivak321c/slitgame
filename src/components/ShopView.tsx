@@ -40,7 +40,7 @@ export default function ShopView({
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => onNavigate('dashboard')}
-          className="flex items-center gap-1.5 text-[#6F625B] hover:text-[#3D342F] transition-colors text-sm font-display font-bold cursor-pointer"
+          className="flex items-center gap-1.5 -ml-1 px-2.5 py-2.5 text-[#6F625B] hover:text-[#3D342F] transition-colors text-sm font-display font-bold cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
@@ -109,7 +109,7 @@ export default function ShopView({
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-display font-bold transition-all cursor-pointer ${
+            className={`px-4 py-3 rounded-xl text-xs font-display font-bold transition-all cursor-pointer ${
               tab === t.id
                 ? 'bg-[#3D342F] text-white'
                 : 'bg-[#FAF4EA] text-[#6F625B] border border-[#EADFCB]'
@@ -164,7 +164,7 @@ export default function ShopView({
                             onClick={() => onBuy(item)}
                             disabled={!canAfford}
                             whileTap={{ scale: 0.94 }}
-                            className="w-full py-1.5 bg-white/80 hover:bg-white border border-[#EADFCB] rounded-lg flex items-center justify-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
+                            className="w-full min-h-[44px] py-1.5 bg-white/80 hover:bg-white border border-[#EADFCB] rounded-lg flex items-center justify-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
                           >
                             <Coins className="w-3 h-3 text-[#F2B84B]" />
                             <span className="font-mono text-[11px] font-bold text-[#3D342F]">{item.price}</span>

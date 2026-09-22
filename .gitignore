@@ -10,3 +10,28 @@ coverage/
 assets
 DESIGN.md
 *.md
+
+# package manager lockfiles (bun only)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# agent / dev tooling
+.impeccable/
+mcp-wrapper.js
+scripts/
+issues/
+*.patch
+
+# throwaway DB probe/test scripts
+.duel-backend-test.ts
+.p1-create.ts
+.p2-join.ts
+.probe-rpc.ts
+.realtime-probe.ts
+
+# supabase CLI local state (contains linked project ref)
+supabase/.temp/
+
+# combined migration export (redundant with supabase/migrations/)
+supabase-migrations-combined.sql

@@ -282,13 +282,13 @@ function Step2Tutorial({ onNext, onBack }: { onNext: () => void; onBack: () => v
 
           {/* Mini keyboard */}
           {!submitted && (
-            <div className="max-w-xs mx-auto">
+            <div className="max-w-sm mx-auto">
               <div className="flex justify-center gap-1 my-1">
                 {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map(k => (
                   <button
                     key={k}
                     onClick={() => handleKey(k)}
-                    className="w-7 h-10 sm:w-8 sm:h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
+                    className="w-8 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
                   >
                     {k}
                   </button>
@@ -299,7 +299,7 @@ function Step2Tutorial({ onNext, onBack }: { onNext: () => void; onBack: () => v
                   <button
                     key={k}
                     onClick={() => handleKey(k)}
-                    className="w-7 h-10 sm:w-8 sm:h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
+                    className="w-8 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
                   >
                     {k}
                   </button>
@@ -308,7 +308,7 @@ function Step2Tutorial({ onNext, onBack }: { onNext: () => void; onBack: () => v
               <div className="flex justify-center gap-1 my-1">
                 <button
                   onClick={submit}
-                  className="px-2.5 h-10 sm:h-11 rounded-lg bg-[#79B96B] hover:bg-[#5E9A50] text-white font-logo font-bold text-[10px] cursor-pointer active:scale-90 transition-transform"
+                  className="px-2.5 h-11 rounded-lg bg-[#79B96B] hover:bg-[#5E9A50] text-white font-logo font-bold text-[10px] cursor-pointer active:scale-90 transition-transform"
                 >
                   ENTER
                 </button>
@@ -316,14 +316,14 @@ function Step2Tutorial({ onNext, onBack }: { onNext: () => void; onBack: () => v
                   <button
                     key={k}
                     onClick={() => handleKey(k)}
-                    className="w-7 h-10 sm:w-8 sm:h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
+                    className="w-8 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold text-xs cursor-pointer active:scale-90 transition-transform"
                   >
                     {k}
                   </button>
                 ))}
                 <button
                   onClick={() => handleKey('DELETE')}
-                  className="px-2.5 h-10 sm:h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold cursor-pointer active:scale-90 transition-transform flex items-center justify-center"
+                  className="px-2.5 h-11 rounded-lg bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] font-logo font-bold cursor-pointer active:scale-90 transition-transform flex items-center justify-center"
                 >
                   <Delete className="w-4 h-4" />
                 </button>
@@ -357,7 +357,7 @@ function Step2Tutorial({ onNext, onBack }: { onNext: () => void; onBack: () => v
           {!submitted && (
             <button
               onClick={onBack}
-              className="flex items-center gap-1.5 text-xs font-display font-bold text-[#A69485] hover:text-[#3D342F] transition-colors cursor-pointer mt-4 mx-auto"
+              className="flex items-center gap-1.5 -ml-2 px-3 py-2.5 text-xs font-display font-bold text-[#A69485] hover:text-[#3D342F] transition-colors cursor-pointer mt-4 mx-auto"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back
@@ -436,8 +436,7 @@ function Step3Identity({
           onKeyDown={e => e.key === 'Enter' && canFinish && onComplete(username, avatar)}
           placeholder="paperpilot"
           maxLength={16}
-          autoFocus
-          className="w-full px-4 py-3 rounded-xl border-2 border-[#E7DCCB] font-mono text-sm font-semibold text-center bg-white focus:outline-none focus:border-[#F28C6F] focus:ring-2 focus:ring-[#FDECE7] placeholder:text-[#D8CCBC] placeholder:font-display placeholder:text-xs"
+          className="w-full px-4 py-3 rounded-xl border-2 border-[#E7DCCB] font-mono text-base font-semibold text-center bg-white focus:outline-none focus:border-[#F28C6F] focus:ring-2 focus:ring-[#FDECE7] placeholder:text-[#D8CCBC] placeholder:font-display placeholder:text-xs"
         />
         <p className="text-[10px] text-[#998D85] mt-1.5">
           Pick any nickname — just no real names or personal info!

@@ -125,14 +125,14 @@ export default function DuelResultSheet({
       <div className="mt-4 flex gap-2 justify-center">
         <button
           onClick={onRematch}
-          className="px-4 py-2.5 bg-[#E45C75] hover:bg-[#C94360] text-white rounded-xl text-xs font-display font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+          className="px-5 py-3.5 bg-[#E45C75] hover:bg-[#C94360] text-white rounded-xl text-xs font-display font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
         >
           <Swords className="w-3.5 h-3.5" />
           New duel
         </button>
         <button
           onClick={onExit}
-          className="px-4 py-2.5 bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] rounded-xl text-xs font-display font-bold transition-colors cursor-pointer"
+          className="px-5 py-3.5 bg-[#F4EBDD] hover:bg-[#E7DCCB] text-[#3D342F] rounded-xl text-xs font-display font-bold transition-colors cursor-pointer"
         >
           Back to arena
         </button>

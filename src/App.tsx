@@ -60,12 +60,20 @@ import ProfileView from './components/ProfileView';
 import OnboardingView from './components/OnboardingView';
 import ShopView from './components/ShopView';
 import CollectionView from './components/CollectionView';
+import { useIsMobile } from './hooks/useIsMobile';
 import Toast, { type ToastData } from './components/Toast';
 import CoinFly, { type CoinFlyData } from './components/CoinFly';
 import StarBurst, { type StarBurstData } from './components/StarBurst';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('landing');
+
+  // Game screens own the full viewport like a wordle.global play screen.
+  // `play` is a fixed h-dvh stage (board + keypad fill it, zero page scroll).
+  // `duel` keeps the normal scrollable shell for its lobby/waiting/result
+  // content screens, but both hide the footer + mobile dock (game chrome).
+  const isGameChrome = currentScreen === 'play' || currentScreen === 'duel';
+  const isFixedStage = currentScreen === 'play';
 
   // Player profile: coins + XP economy. Lives in the persisted game store so
   // progress survives a refresh (previously reset to defaults on every load).
@@ -128,6 +136,7 @@ export default function App() {
   }, [playerId, setRecentOpponents]);
 
   const [pouchOpen, setPouchOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // Duel code from a share link (?duel=ABC123) — handed to the Duel screen.
   const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
@@ -453,11 +462,13 @@ export default function App() {
       username: username.trim().replace(/^@+/, '') || 'paperpilot',
       avatar: avatar || prev.avatar,
     }));
-    setCurrentScreen('dashboard');
+    // Land in the duel when arriving via a share link (?duel=CODE) —
+    // onboarding must not hijack the invite destination.
+    setCurrentScreen(prev => (prev === 'duel' ? prev : 'dashboard'));
   };
 
   return (
-    <div className={`min-h-screen bg-[#FFF9F0] text-[#3D342F] font-body selection:bg-[#FFF3D6] relative flex flex-col justify-between ${dyslexiaFont ? 'font-dyslexia' : ''}`}>
+    <div className={`${isFixedStage ? 'h-dvh overflow-hidden' : 'min-h-screen'} bg-[#FFF9F0] text-[#3D342F] font-body selection:bg-[#FFF3D6] relative flex flex-col justify-between ${dyslexiaFont ? 'font-dyslexia' : ''}`}>
 
       {/* Skip link — first tabbable focus; jumps keyboard users past the
           header/nav straight into the game (Phase 4 a11y). */}
@@ -470,7 +481,7 @@ export default function App() {
 
       {/* 1. TOP GLOBAL APP HEADER */}
       <header className="sticky top-0 z-40 bg-[#FFFCF7]/95 backdrop-blur-md border-b-2 border-[#E7DCCB] px-2.5 sm:px-4 py-2 sm:py-3 shadow-[0_2px_12px_rgba(61,52,47,0.02)]">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2 sm:px-2">
 
           {/* Brand & Nav Left Cluster */}
           <div className="flex items-center gap-2 sm:gap-8 min-w-0">
@@ -489,7 +500,7 @@ export default function App() {
             </motion.button>
 
             {currentScreen !== 'landing' && (
-              <nav className="hidden md:flex items-center gap-6 relative">
+              <nav className="hidden md:flex items-center gap-1 lg:gap-1.5 relative" aria-label="Primary">
                 {[
                   { id: 'dashboard' as ScreenType, label: 'Workshop', icon: Compass, color: 'text-[#E45C75]' },
                   { id: 'play' as ScreenType, label: 'Play', icon: Gamepad2, color: 'text-[#F2B84B]' },
@@ -500,19 +511,25 @@ export default function App() {
                   { id: 'profile' as ScreenType, label: 'Profile', icon: User, color: 'text-[#79B96B]' },
                 ].map(item => {
                   const Icon = item.icon;
+                  const isActive = currentScreen === item.id;
                   return (
                     <motion.button
                       key={item.id}
                       onClick={() => setCurrentScreen(item.id)}
-                      whileTap={{ scale: 0.96 }}
-                      className={`relative py-1.5 text-xs font-display font-extrabold tracking-wide transition-colors flex items-center gap-1.5 group/nav cursor-pointer`}
+                      whileTap={{ scale: 0.9 }}
+                      title={item.label}
+                      aria-label={item.label}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
+                        isActive ? 'bg-[#FAF4EA]' : 'text-[#A69485] hover:bg-[#F4EBDD] hover:text-[#3D342F]'
+                      }`}
                     >
-                      <Icon className={`w-3.5 h-3.5 transition-transform group-hover/nav:scale-110 ${currentScreen === item.id ? item.color : 'text-[#A69485]'}`} />
-                      <span>{item.label}</span>
-                      {currentScreen === item.id && (
+                      <Icon className={`w-4.5 h-4.5 transition-transform ${isActive ? item.color : ''}`} />
+                      {isActive && (
                         <motion.div
                           layoutId="activeHeaderTabLine"
-                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E45C75] rounded-full"
+                          className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: item.color.replace('text-[', '').replace(']', '') }}
                           transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                         />
                       )}
@@ -601,7 +618,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* 3. MAIN INTERACTIVE CONTENT PORT */}
-      <main id="main-content" tabIndex={-1} className="flex-1 w-full flex flex-col justify-start relative pb-20 md:pb-8">
+      <main id="main-content" tabIndex={-1} className={`flex-1 w-full flex flex-col justify-start relative ${isFixedStage ? 'min-h-0 pb-0 overflow-hidden' : 'pb-20 md:pb-8'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={profile.hasOnboarded ? currentScreen : 'onboarding'}
@@ -609,7 +626,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full"
+            className={`w-full ${isFixedStage ? 'h-full' : ''}`}
           >
             {!profile.hasOnboarded ? (
               <OnboardingView onComplete={handleOnboardingComplete} />
@@ -728,8 +745,8 @@ export default function App() {
       </main>
 
       {/* 4. FIXED MOBILE BOTTOM NAVIGATION BAR */}
-      {profile.hasOnboarded && (
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FFFCF7]/95 backdrop-blur-md border-t-2 border-[#E7DCCB] px-3 py-1.5 flex justify-around items-center shadow-[0_-4px_20px_rgba(61,52,47,0.08)]">
+      {profile.hasOnboarded && !isGameChrome && (
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FFFCF7]/95 backdrop-blur-md border-t-2 border-[#E7DCCB] px-3 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] flex justify-around items-center shadow-[0_-4px_20px_rgba(61,52,47,0.08)]">
         {[
           { id: 'dashboard', label: 'Workshop', icon: Compass, color: 'text-[#E45C75]' },
           { id: 'play', label: 'Play', icon: Gamepad2, color: 'text-[#F2B84B]' },
@@ -769,26 +786,37 @@ export default function App() {
       </div>
       )}
 
-      {/* 5. FOOTER CREDITS */}
-      <footer className="py-8 border-t border-[#E7DCCB]/60 text-center text-xs text-[#998D85] font-display">
+      {/* 5. FOOTER CREDITS — hidden on game screens (play/duel) so the whole
+          viewport belongs to the board + keypad, exactly like the reference.
+          It still shows on dashboard/shop/rankings/etc. */}
+      {!isGameChrome && (
+      <footer className="flex-none py-8 border-t border-[#E7DCCB]/60 text-center text-xs text-[#998D85] font-display">
         <div className="max-w-4xl mx-auto px-4">
           <p>© 2026 Slotword Workshop. Coins are fun-only — no real money involved.</p>
         </div>
       </footer>
+      )}
 
       {/* 6. COIN POUCH DRAWER */}
       <AnimatePresence>
         {pouchOpen && (
-          <div className="fixed inset-0 z-50 flex justify-end bg-[#3D342F]/40 backdrop-blur-xs">
+          <div className={`fixed inset-0 z-50 flex bg-[#3D342F]/40 backdrop-blur-xs ${isMobile ? 'items-end' : 'justify-end'}`}>
             <div className="absolute inset-0" onClick={() => setPouchOpen(false)} />
 
             <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
+              initial={isMobile ? { y: '100%' } : { x: '100%' }}
+              animate={isMobile ? { y: 0 } : { x: 0 }}
+              exit={isMobile ? { y: '100%' } : { x: '100%' }}
               transition={{ type: 'spring', damping: 24, stiffness: 220 }}
-              className="relative w-full sm:max-w-sm bg-[#FFFCF7] border-l border-[#E7DCCB] h-full shadow-raised p-4 sm:p-6 flex flex-col justify-between overflow-y-auto"
+              className={`relative bg-[#FFFCF7] shadow-raised flex flex-col justify-between overflow-y-auto ${
+                isMobile
+                  ? 'w-full max-h-[92dvh] rounded-t-[28px] border-t border-[#E7DCCB] px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]'
+                  : 'w-full sm:max-w-sm border-l border-[#E7DCCB] h-full p-4 sm:p-6'
+              }`}
             >
+              {isMobile && (
+                <div className="mx-auto mb-2 w-10 h-1.5 rounded-full bg-[#E7DCCB] shrink-0" aria-hidden="true" />
+              )}
               <div className="flex flex-col flex-1 min-h-0">
                 <div className="flex justify-between items-center pb-3 sm:pb-4 border-b border-[#E7DCCB] mb-4 sm:mb-6 shrink-0">
                   <div className="flex items-center gap-2 text-[#6F625B]">

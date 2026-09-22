@@ -95,7 +95,7 @@ export default function ProfileView({
       <div className="flex items-center justify-between">
         <button
           onClick={() => onNavigate('dashboard')}
-          className="flex items-center gap-1.5 text-xs font-display font-bold text-[#A69485] hover:text-[#3D342F] transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 -ml-1 px-2.5 py-2.5 text-xs font-display font-bold text-[#A69485] hover:text-[#3D342F] transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Dashboard
@@ -141,7 +141,7 @@ export default function ProfileView({
           <motion.button
             onClick={startEdit}
             whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_2px_0_#AF324B] transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-3 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_2px_0_#AF324B] transition-all cursor-pointer"
           >
             <Pencil className="w-3.5 h-3.5" />
             Edit profile
@@ -152,7 +152,7 @@ export default function ProfileView({
               onOpenPouch();
             }}
             whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#FAF4EA] hover:bg-[#F4EBDD] border border-[#E7DCCB] text-[#3D342F] font-display font-extrabold text-xs rounded-xl transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-3 bg-[#FAF4EA] hover:bg-[#F4EBDD] border border-[#E7DCCB] text-[#3D342F] font-display font-extrabold text-xs rounded-xl transition-all cursor-pointer"
           >
             <Coins className="w-3.5 h-3.5 text-[#F2B84B]" />
             Open coin pouch
@@ -160,7 +160,7 @@ export default function ProfileView({
           <motion.button
             onClick={shareProfile}
             whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#FAF4EA] hover:bg-[#F4EBDD] border border-[#E7DCCB] text-[#3D342F] font-display font-extrabold text-xs rounded-xl transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-3 bg-[#FAF4EA] hover:bg-[#F4EBDD] border border-[#E7DCCB] text-[#3D342F] font-display font-extrabold text-xs rounded-xl transition-all cursor-pointer"
           >
             {shared ? <Check className="w-3.5 h-3.5 text-[#79B96B]" /> : <Link2 className="w-3.5 h-3.5 text-[#65B9E8]" />}
             {shared ? 'Copied!' : 'Share profile'}
@@ -189,7 +189,7 @@ export default function ProfileView({
                       sound.playKeyPress();
                       setDraftAvatar(opt);
                     }}
-                    className={`w-9 h-9 rounded-xl text-lg border flex items-center justify-center transition-all cursor-pointer ${
+                    className={`w-11 h-11 rounded-xl text-lg border flex items-center justify-center transition-all cursor-pointer ${
                       draftAvatar === opt
                         ? 'bg-[#FFF3D6] border-[#F2C974] shadow-[0_2px_0_#E5B74E]'
                         : 'bg-white border-[#E7DCCB] hover:bg-[#FAF4EA]'
@@ -207,14 +207,14 @@ export default function ProfileView({
                   onChange={e => setDraftName(e.target.value.replace(/^@+/, ''))}
                   placeholder="paperpilot"
                   maxLength={16}
-                  className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-[#E7DCCB] font-mono text-xs font-semibold bg-white focus:outline-none focus:border-[#F28C6F] focus:ring-2 focus:ring-[#FDECE7]"
+                  className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-[#E7DCCB] font-mono text-base font-semibold bg-white focus:outline-none focus:border-[#F28C6F] focus:ring-2 focus:ring-[#FDECE7]"
                 />
               </div>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={saveEdit}
-                  className="px-4 py-2 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_2px_0_#AF324B] transition-all cursor-pointer"
+                  className="px-4 py-3 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_2px_0_#AF324B] transition-all cursor-pointer"
                 >
                   Save changes
                 </button>
@@ -224,7 +224,7 @@ export default function ProfileView({
                     sound.playKeyPress();
                     setEditing(false);
                   }}
-                  className="px-4 py-2 bg-white border border-[#E7DCCB] text-[#6F625B] font-display font-extrabold text-xs rounded-xl hover:bg-[#FAF4EA] transition-all cursor-pointer"
+                  className="px-4 py-3 bg-white border border-[#E7DCCB] text-[#6F625B] font-display font-extrabold text-xs rounded-xl hover:bg-[#FAF4EA] transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -398,7 +398,7 @@ export default function ProfileView({
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => onSetEquippedMascotItem(null)}
-                  className={`px-3 py-2 rounded-xl text-xs font-display font-bold border-2 transition-all cursor-pointer ${
+                    className={`px-3 py-3 rounded-xl text-xs font-display font-bold border-2 transition-all cursor-pointer ${
                     !equippedMascotItem
                       ? 'bg-[#F0ECFA] border-[#8B72C9] text-[#7155B5]'
                       : 'bg-[#FAF4EA] border-[#EADFCB] text-[#998D85]'
@@ -410,7 +410,7 @@ export default function ProfileView({
                   <button
                     key={item.id}
                     onClick={() => onSetEquippedMascotItem(item.id)}
-                    className={`px-3 py-2 rounded-xl text-lg border-2 transition-all cursor-pointer ${
+                    className={`px-3 py-3 rounded-xl text-lg border-2 transition-all cursor-pointer ${
                       equippedMascotItem === item.id
                         ? 'bg-[#F0ECFA] border-[#8B72C9]'
                         : 'bg-[#FAF4EA] border-[#EADFCB]'

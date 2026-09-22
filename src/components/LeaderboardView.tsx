@@ -18,7 +18,7 @@ export default function LeaderboardView({ onNavigate, profile }: LeaderboardView
       <div className="flex items-center justify-between mb-6 pb-3 border-b border-[#E7DCCB]">
         <button
           onClick={() => onNavigate('dashboard')}
-          className="flex items-center gap-1.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 -ml-1 px-2.5 py-2.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           Dashboard
@@ -50,7 +50,7 @@ export default function LeaderboardView({ onNavigate, profile }: LeaderboardView
         <motion.button
           onClick={() => onNavigate('duel')}
           whileTap={{ scale: 0.94 }}
-          className="px-4 py-2 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_2px_0_#AF324B] transition-all cursor-pointer whitespace-nowrap"
+          className="px-4 py-3 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_2px_0_#AF324B] transition-all cursor-pointer whitespace-nowrap"
         >
           New duel
         </motion.button>
@@ -100,7 +100,7 @@ export default function LeaderboardView({ onNavigate, profile }: LeaderboardView
             </p>
             <button
               onClick={() => onNavigate('play')}
-              className="px-4 py-2 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_2px_0_#AF324B] transition-all cursor-pointer"
+              className="px-4 py-3 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-xs rounded-xl shadow-[0_2px_0_#AF324B] transition-all cursor-pointer"
             >
               Play your first puzzle
             </button>

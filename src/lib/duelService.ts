@@ -250,26 +250,24 @@ export async function getDuelState(duelId: string): Promise<DuelSnapshot | null>
   return toSnapshot(data as RawDuelState, playerId);
 }
 
-/** Submit a guess through the Edge Function (server-authoritative colors). */
+/**
+ * Submit a guess via the `submit_guess_rpc` SECURITY DEFINER RPC — colors
+ * are computed server-side (PL/pgSQL port of calculateLetterStates) and the
+ * complete snapshot (duel + players + my_guesses) comes back in one round
+ * trip, so tiles color instantly with no extra refetch. This replaced the
+ * submit_guess Edge Function, whose cold starts added seconds per guess.
+ */
 export async function submitDuelGuess(
   duelId: string,
   guess: string
 ): Promise<DuelSnapshot> {
   if (!supabase) throw new DuelError('offline');
   const playerId = await requirePlayerId();
-  const { data, error } = await supabase.functions.invoke('submit_guess', {
-    body: { duel_id: duelId, guess },
+  const raw = await rpc<RawDuelState>('submit_guess_rpc', {
+    p_duel_id: duelId,
+    p_guess: guess,
   });
-  if (error) {
-    console.warn('[duel] submit_guess failed:', error.message);
-    throw new DuelError('server-error');
-  }
-  if (data && typeof data === 'object' && 'error' in data) {
-    const code = (data as { error: string }).error as DuelErrorCode;
-    throw new DuelError(code in FRIENDLY ? code : 'unknown');
-  }
-  if (!data || !('duel' in data)) throw new DuelError('unknown');
-  return toSnapshot(data as RawDuelState, playerId);
+  return toSnapshot(raw, playerId);
 }
 
 export interface DuelSubscription {
@@ -278,8 +276,12 @@ export interface DuelSubscription {
 
 /**
  * Live sync for one duel: any change to the duel, its players, or guesses
- * triggers a single snapshot refetch (debounced). Also runs the presence
- * heartbeat every 10 s so the opponent can claim a forfeit if we vanish.
+ * triggers a single snapshot refetch (debounced). A 2 s polling fallback
+ * guarantees delivery even when Realtime postgres_changes is unavailable
+ * (verified dead on some projects — subscriptions join but emit nothing),
+ * so an opponent joining or guessing is never missed. Also runs the
+ * presence heartbeat every 10 s so the opponent can claim a forfeit if
+ * we vanish.
  */
 export function subscribeDuel(
   duelId: string,
@@ -292,45 +294,97 @@ export function subscribeDuel(
   }
 
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let lastEventAt = Date.now();
+  let failures = 0;
   const refetch = () => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       getDuelState(duelId)
         .then(snap => {
+          failures = 0;
           if (snap) onChange(snap);
         })
-        .catch(err => onError?.(err));
+        .catch(err => {
+          // Transient network blips fail every poll; the next one retries.
+          // Surface only the FIRST failure of a streak so the UI doesn't
+          // toast + shake in a loop for one dropped connection.
+          failures += 1;
+          if (failures === 1) onError?.(err);
+        });
     }, 150);
   };
 
+  let channelStatus: string | null = null;
+  let pendingRemove = false;
   const channel = supabase
     .channel(`duel:${duelId}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'duels', filter: `id=eq.${duelId}` },
-      refetch
+      () => {
+        lastEventAt = Date.now();
+        refetch();
+      }
     )
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'duel_players', filter: `duel_id=eq.${duelId}` },
-      refetch
+      () => {
+        lastEventAt = Date.now();
+        refetch();
+      }
     )
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'guesses', filter: `duel_id=eq.${duelId}` },
-      refetch
+      () => {
+        lastEventAt = Date.now();
+        refetch();
+      }
     )
-    .subscribe();
+    .subscribe(status => {
+      channelStatus = status;
+      if (pendingRemove) {
+        pendingRemove = false;
+        supabase.removeChannel(channel);
+      }
+    });
 
+  // Polling fallback: Realtime may silently deliver nothing (verified on
+  // some Supabase projects). A 2 s snapshot poll bounds worst-case delay;
+  // the 150 ms debounce coalesces poll + realtime refetches into one RPC.
+  // Consecutive failures back the poll off (2 s → 4 s → … capped 15 s) so
+  // an outage doesn't hammer the network or the console.
+  let pollDelay = 2_000;
+  let poll: ReturnType<typeof setTimeout> | null = null;
+  const schedulePoll = () => {
+    poll = setTimeout(() => {
+      if (Date.now() - lastEventAt >= 1_800) refetch();
+      schedulePoll();
+    }, pollDelay);
+  };
+  schedulePoll();
   const heartbeat = setInterval(() => touchDuel(duelId), 10_000);
-  // One immediate beat so last_seen is fresh from the moment we watch.
+  // One immediate beat + one immediate snapshot so the UI is fresh from
+  // the moment we watch.
   touchDuel(duelId);
+  refetch();
 
   return {
     unsubscribe: () => {
       if (timer) clearTimeout(timer);
+      if (poll) clearTimeout(poll);
       clearInterval(heartbeat);
-      if (supabase) supabase.removeChannel(channel);
+      if (channelStatus === 'SUBSCRIBED') {
+        supabase.removeChannel(channel);
+        return;
+      }
+      // The channel never reached SUBSCRIBED (StrictMode double-mount in
+      // dev, or a handshake still in flight). Removing it now shuts the
+      // socket down mid-connect — the exact browser warning "WebSocket is
+      // closed before the connection is established". Let the handshake
+      // settle (or error), then remove cleanly.
+      pendingRemove = true;
     },
   };
 }

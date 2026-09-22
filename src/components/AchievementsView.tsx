@@ -89,7 +89,7 @@ export default function AchievementsView({ onNavigate, achievements }: Achieveme
             sound.playKeyPress();
             onNavigate('dashboard');
           }}
-          className="flex items-center gap-1.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 -ml-1 px-2.5 py-2.5 text-sm font-display font-bold text-[#6F625B] hover:text-[#3D342F] transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           Dashboard
