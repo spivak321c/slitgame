@@ -4,9 +4,12 @@ import { ScreenType } from '../types';
 
 interface LandingPageProps {
   onNavigate: (screen: ScreenType) => void;
+  /** False for brand-new visitors (hasOnboarded=false) — adapts the hero
+   *  copy + CTAs to offer onboarding OR an instant quick round. */
+  isFirstTime: boolean;
 }
 
-export default function LandingPage({ onNavigate }: LandingPageProps) {
+export default function LandingPage({ onNavigate, isFirstTime }: LandingPageProps) {
   const titleLetters = [
     { char: 'S', bg: 'bg-[#E45C75]', text: 'text-white', rot: -5 },
     { char: 'L', bg: 'bg-[#65B9E8]', text: 'text-white', rot: 3 },
@@ -91,14 +94,16 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           variants={itemVariants}
           className="text-4xl md:text-5xl font-logo font-extrabold tracking-tight text-[#3D342F] leading-tight mb-4"
         >
-          Guess the hidden word.
+          {isFirstTime ? 'Welcome to your word playground.' : 'Guess the hidden word.'}
         </motion.h1>
 
         <motion.p
           variants={itemVariants}
           className="text-base md:text-lg text-[#6F625B] font-display font-medium leading-relaxed max-w-lg"
         >
-          Warm, friendly word puzzles for every mood — quick 4-letter rounds or grand 6-letter battles. Earn coins and XP in solo rounds, then challenge a friend to a live match duel.
+          {isFirstTime
+            ? "Warm, friendly word puzzles for every mood. Set up your name and mascot in a jiffy — or skip it and jump straight into a quick round. You decide, and Slit the fox will be here either way."
+            : "Warm, friendly word puzzles for every mood — quick 4-letter rounds or grand 6-letter battles. Earn coins and XP in solo rounds, then challenge a friend to a live match duel."}
         </motion.p>
       </div>
 
@@ -106,26 +111,52 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         variants={itemVariants}
         className="flex flex-col sm:flex-row gap-4 items-center mb-14 w-full max-w-md justify-center"
       >
-        <motion.button
-          id="play-now-btn"
-          onClick={() => onNavigate('play')}
-          whileTap={{ scale: 0.96 }}
-          className="group w-full sm:w-auto px-8 py-4 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-base rounded-2xl shadow-[0_4px_0_#AF324B,0_10px_20px_-4px_rgba(228,92,117,0.3)] hover:shadow-[0_6px_0_#AF324B,0_14px_24px_-4px_rgba(228,92,117,0.35)] hover:-translate-y-0.5 active:translate-y-1 active:shadow-none transition-all duration-150 flex items-center justify-center gap-2.5 cursor-pointer"
-        >
-          <Gamepad2 className="w-5 h-5 text-white/90" />
-          <span>Play Now</span>
-          <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
-        </motion.button>
+        {isFirstTime ? (
+          <>
+            <motion.button
+              id="setup-profile-btn"
+              onClick={() => onNavigate('onboarding')}
+              whileTap={{ scale: 0.96 }}
+              className="group w-full sm:w-auto px-8 py-4 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-base rounded-2xl shadow-[0_4px_0_#AF324B,0_10px_20px_-4px_rgba(228,92,117,0.3)] hover:shadow-[0_6px_0_#AF324B,0_14px_24px_-4px_rgba(228,92,117,0.35)] hover:-translate-y-0.5 active:translate-y-1 active:shadow-none transition-all duration-150 flex items-center justify-center gap-2.5 cursor-pointer"
+            >
+              <span>Set up my name & avatar</span>
+              <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
+            </motion.button>
 
-        <motion.button
-          id="duel-btn"
-          onClick={() => onNavigate('duel')}
-          whileTap={{ scale: 0.96 }}
-          className="w-full sm:w-auto px-7 py-4 bg-[#FFFCF7] hover:bg-[#FAF3E7] border-2 border-[#EADBCC] hover:border-[#D1BFAD] text-[#3D342F] font-display font-extrabold text-base rounded-2xl shadow-[0_3px_0_#EADBCC] active:translate-y-0.5 active:shadow-none transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <Users className="w-4.5 h-4.5 text-[#F28C6F]" />
-          <span>Enter Duels</span>
-        </motion.button>
+            <motion.button
+              id="quick-round-btn"
+              onClick={() => onNavigate('play')}
+              whileTap={{ scale: 0.96 }}
+              className="w-full sm:w-auto px-7 py-4 bg-[#FFFCF7] hover:bg-[#FAF3E7] border-2 border-[#EADBCC] hover:border-[#D1BFAD] text-[#3D342F] font-display font-extrabold text-base rounded-2xl shadow-[0_3px_0_#EADBCC] active:translate-y-0.5 active:shadow-none transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Gamepad2 className="w-4.5 h-4.5 text-[#F2B84B]" />
+              <span>Skip — play a quick round</span>
+            </motion.button>
+          </>
+        ) : (
+          <>
+            <motion.button
+              id="play-now-btn"
+              onClick={() => onNavigate('play')}
+              whileTap={{ scale: 0.96 }}
+              className="group w-full sm:w-auto px-8 py-4 bg-[#E45C75] hover:bg-[#D34B64] text-white font-display font-extrabold text-base rounded-2xl shadow-[0_4px_0_#AF324B,0_10px_20px_-4px_rgba(228,92,117,0.3)] hover:shadow-[0_6px_0_#AF324B,0_14px_24px_-4px_rgba(228,92,117,0.35)] hover:-translate-y-0.5 active:translate-y-1 active:shadow-none transition-all duration-150 flex items-center justify-center gap-2.5 cursor-pointer"
+            >
+              <Gamepad2 className="w-5 h-5 text-white/90" />
+              <span>Play Now</span>
+              <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
+            </motion.button>
+
+            <motion.button
+              id="duel-btn"
+              onClick={() => onNavigate('duel')}
+              whileTap={{ scale: 0.96 }}
+              className="w-full sm:w-auto px-7 py-4 bg-[#FFFCF7] hover:bg-[#FAF3E7] border-2 border-[#EADBCC] hover:border-[#D1BFAD] text-[#3D342F] font-display font-extrabold text-base rounded-2xl shadow-[0_3px_0_#EADBCC] active:translate-y-0.5 active:shadow-none transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Users className="w-4.5 h-4.5 text-[#F28C6F]" />
+              <span>Enter Duels</span>
+            </motion.button>
+          </>
+        )}
       </motion.div>
 
       <motion.div

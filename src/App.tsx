@@ -621,20 +621,21 @@ export default function App() {
       <main id="main-content" tabIndex={-1} className={`flex-1 w-full flex flex-col justify-start relative ${isFixedStage ? 'min-h-0 pb-0 overflow-hidden' : 'pb-20 md:pb-8'}`}>
         <AnimatePresence mode="wait">
           <motion.div
-            key={profile.hasOnboarded ? currentScreen : 'onboarding'}
+            key={currentScreen}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className={`w-full ${isFixedStage ? 'h-full' : ''}`}
           >
-            {!profile.hasOnboarded ? (
+            {currentScreen === 'onboarding' && (
               <OnboardingView onComplete={handleOnboardingComplete} />
-            ) : (
-              <>
+            )}
+
             {currentScreen === 'landing' && (
               <LandingPage
                 onNavigate={setCurrentScreen}
+                isFirstTime={!profile.hasOnboarded}
               />
             )}
 
@@ -737,8 +738,6 @@ export default function App() {
                 onNavigate={setCurrentScreen}
                 ownedStickers={ownedStickers}
               />
-            )}
-              </>
             )}
           </motion.div>
         </AnimatePresence>
