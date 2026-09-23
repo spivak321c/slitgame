@@ -196,15 +196,12 @@ export default function PuzzleView({ onNavigate, onSolve }: PuzzleViewProps) {
   const winCoins = difficulty.baseReward + Math.max(0, maxAttempts - guesses.length) * 2;
 
   // Tile size that makes the whole board fit the available height — no
-  // internal scroll, exactly like wordle.global. No reserve: the "keys left"
-  // strip is gone from this page, so the board owns the full middle.
+  // internal scroll, exactly like wordle.global.
   const { ref: boardFitRef, size: tileSize } = useBoardFit(
     maxAttempts,
     wordLength,
     8,
-    28,
-    78,
-    0
+    78
   );
 
   const statusColor: Record<TileResult['status'], string> = {

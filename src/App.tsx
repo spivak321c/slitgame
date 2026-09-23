@@ -67,13 +67,15 @@ import StarBurst, { type StarBurstData } from './components/StarBurst';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('landing');
+  const [duelLive, setDuelLive] = useState(false);
 
   // Game screens own the full viewport like a wordle.global play screen.
   // `play` is a fixed h-dvh stage (board + keypad fill it, zero page scroll).
-  // `duel` keeps the normal scrollable shell for its lobby/waiting/result
-  // content screens, but both hide the footer + mobile dock (game chrome).
+  // The duel only becomes a fixed stage while a match is live — its lobby,
+  // waiting and result screens still scroll normally. Both hide the footer +
+  // mobile dock (game chrome).
   const isGameChrome = currentScreen === 'play' || currentScreen === 'duel';
-  const isFixedStage = currentScreen === 'play';
+  const isFixedStage = currentScreen === 'play' || (currentScreen === 'duel' && duelLive);
 
   // Player profile: coins + XP economy. Lives in the persisted game store so
   // progress survives a refresh (previously reset to defaults on every load).
@@ -690,6 +692,7 @@ export default function App() {
                   onJoinCodeHandled={() => setPendingJoinCode(null)}
                   autoCreateDifficulty={challengeDifficulty}
                   onAutoCreateHandled={() => setChallengeDifficulty(null)}
+                  onLiveChange={setDuelLive}
                 />
               </Suspense>
             )}

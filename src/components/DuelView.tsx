@@ -55,6 +55,7 @@ interface DuelViewProps {
   /** Phase 4 — auto-create a duel at this difficulty (Recent Rivals rematch). */
   autoCreateDifficulty?: Difficulty | null;
   onAutoCreateHandled?: () => void;
+  onLiveChange?: (live: boolean) => void;
 }
 
 const fmtClock = (totalSec: number) =>
@@ -69,6 +70,7 @@ export default function DuelView({
   onJoinCodeHandled,
   autoCreateDifficulty,
   onAutoCreateHandled,
+  onLiveChange,
 }: DuelViewProps) {
   // ── Stores ──────────────────────────────────────────────────────────
   const profile = useGameStore(s => s.profile);
@@ -106,10 +108,14 @@ export default function DuelView({
     duel?.attempts_limit ?? 6,
     duel?.word_length ?? 5,
     8,
-    26,
-    68,
-    160
+    78
   );
+
+  const isLiveMatch = phase === 'live' && Boolean(duel);
+  useEffect(() => {
+    onLiveChange?.(isLiveMatch);
+    return () => onLiveChange?.(false);
+  }, [isLiveMatch, onLiveChange]);
 
   // ── Snapshot application ────────────────────────────────────────────
   const applySnapshot = useCallback(
@@ -581,12 +587,12 @@ export default function DuelView({
     label: string
   ) => (
     <div
-      className={`flex-1 min-w-0 rounded-2xl border p-2.5 ${
+      className={`flex-1 min-w-0 rounded-xl border px-2 py-1.5 ${
         isMe ? 'bg-[#F0F7EE] border-[#CBE3C6]' : 'bg-[#F5F1FB] border-[#E0D8F5]'
       }`}
     >
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-white border border-[#E7DCCB] grid place-items-center text-base shrink-0 select-none">
+      <div className="flex items-center gap-1.5">
+        <div className="w-7 h-7 rounded-full bg-white border border-[#E7DCCB] grid place-items-center text-sm shrink-0 select-none">
           {player?.avatar ? (
             player.avatar
           ) : (
@@ -628,15 +634,22 @@ export default function DuelView({
 
   // ═══ RENDER ════════════════════════════════════════════════════════
   return (
-    <div className="max-w-4xl mx-auto px-4">
-      {/* Error banner */}
+    <div
+      className={`max-w-4xl mx-auto px-3 sm:px-4 ${isLiveMatch ? 'h-full flex flex-col relative' : ''}`}
+    >
+      {/* Error banner — floats over a live match so a network hiccup can
+          never shrink the board mid-duel. */}
       <AnimatePresence>
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="max-w-2xl mx-auto mb-5 p-3.5 bg-[#FCE8EC] border border-[#E45C75]/40 rounded-2xl flex items-start gap-3"
+            className={
+              isLiveMatch
+                ? 'absolute z-30 top-2 left-1/2 -translate-x-1/2 w-[min(94%,26rem)] p-2.5 bg-[#FCE8EC] border border-[#E45C75]/40 rounded-2xl flex items-start gap-2.5 shadow-card'
+                : 'max-w-2xl mx-auto mb-5 p-3.5 bg-[#FCE8EC] border border-[#E45C75]/40 rounded-2xl flex items-start gap-3'
+            }
           >
             <Zap className="w-4.5 h-4.5 text-[#E45C75] shrink-0 mt-0.5" />
             <p className="flex-1 min-w-0 text-xs text-[#3D342F] font-display">{error}</p>
@@ -878,18 +891,18 @@ export default function DuelView({
 
       {/* ═══ 3. LIVE MATCH ═══════════════════════════════════════════ */}
       {phase === 'live' && duel && (
-        <div className="h-[calc(100dvh-3.125rem)] md:h-[calc(100dvh-4.25rem)] bg-[#FFFCF7] border-2 border-[#E7DCCB] rounded-3xl shadow-card flex flex-col overflow-hidden px-3 sm:px-5 py-3">
-          {/* Header: live badge · timer · exit (fixed) */}
-          <div className="flex-none flex items-center justify-between gap-3 pb-3 border-b border-[#E7DCCB] mb-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#F28C6F] animate-pulse" />
-              <span className="text-xs font-bold text-[#F28C6F] uppercase tracking-wider font-display">
-                Live Duel · {duel.code}
+        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
+          {/* Header: live badge · timer · exit */}
+          <div className="flex-none flex items-center justify-between gap-2 pb-2 border-b border-[#E7DCCB]">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-[#F28C6F] animate-pulse shrink-0" />
+              <span className="text-[11px] font-bold text-[#F28C6F] uppercase tracking-wider font-display truncate">
+                Live · {duel.code}
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="px-2.5 py-1 bg-[#FFF3D6] text-[#D99B28] rounded-lg font-mono font-bold text-xs flex items-center gap-1.5">
-                <Timer className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="px-2 py-1 bg-[#FFF3D6] text-[#D99B28] rounded-lg font-mono font-bold text-[11px] flex items-center gap-1">
+                <Timer className="w-3 h-3" />
                 {fmtClock(elapsedSec)}
               </span>
               {confirmForfeit ? (
@@ -897,13 +910,13 @@ export default function DuelView({
                   <span className="text-[10px] font-display font-bold text-[#6F625B]">Give up?</span>
                   <button
                     onClick={handleForfeit}
-                    className="px-3 py-2.5 bg-[#E45C75] text-white text-[10px] font-display font-extrabold rounded-lg cursor-pointer"
+                    className="px-2.5 py-1.5 bg-[#E45C75] text-white text-[10px] font-display font-extrabold rounded-lg cursor-pointer"
                   >
                     Yes, forfeit
                   </button>
                   <button
                     onClick={() => setConfirmForfeit(false)}
-                    className="px-3 py-2.5 bg-[#F4EBDD] text-[#3D342F] text-[10px] font-display font-extrabold rounded-lg cursor-pointer"
+                    className="px-2.5 py-1.5 bg-[#F4EBDD] text-[#3D342F] text-[10px] font-display font-extrabold rounded-lg cursor-pointer"
                   >
                     Keep playing
                   </button>
@@ -911,7 +924,7 @@ export default function DuelView({
               ) : (
                 <button
                   onClick={() => setConfirmForfeit(true)}
-                  className="flex items-center gap-1 px-2.5 py-2.5 text-[10.5px] font-display font-extrabold text-[#A69485] hover:text-[#E45C75] transition-colors cursor-pointer"
+                  className="flex items-center gap-1 px-2 py-1.5 text-[10.5px] font-display font-extrabold text-[#A69485] hover:text-[#E45C75] transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Forfeit
@@ -920,45 +933,45 @@ export default function DuelView({
             </div>
           </div>
 
-          {/* Player chips (fixed) */}
-          <div className="flex-none flex gap-2.5 mb-3">
+          {/* Player chips */}
+          <div className="flex-none flex gap-2 my-2">
             {playerChip(me, true, 'You')}
             {playerChip(opponent, false, 'Opponent')}
           </div>
 
-          {/* Board area: fills the middle. Tiles are sized to fit this exact
-              space, so the grid never needs an internal scroll container. The
-              chip already shows chances left; the slot below only hosts the
-              conditional status messages. */}
-          <div ref={liveBoardRef} className="flex-1 min-h-0 flex flex-col items-center justify-center py-1">
-            <div className="flex w-full flex-col items-center">
-            <div className="flex items-center justify-center gap-1.5 text-[11px] font-logo font-extrabold text-[#79B96B] uppercase tracking-wider mb-2.5">
-              <User className="w-3.5 h-3.5" /> Your board
+          {/* Board area: fills the middle. Only the grid is measured, so the
+              status strip below can never eat into the tile size and spill
+              over the keyboard. min-h keeps tiles usable on short landscape
+              screens — the shell scrolls instead of crushing the board. */}
+          <div className="flex-1 min-h-[190px] flex flex-col items-center gap-2 overflow-hidden py-1">
+            <div
+              ref={liveBoardRef}
+              className="w-full flex-1 min-h-0 flex items-center justify-center"
+            >
+              {renderMyBoard(liveTile)}
             </div>
-            {renderMyBoard(liveTile)}
 
             {/* Conditional status: out-of-guesses notice + claim-forfeit.
                 (Solving now settles the duel instantly, so there is no
                 "waiting for opponent" state to show.) */}
             {(me?.status === 'lost' && opponent?.status === 'playing') ||
             (opponentIsStale(opponent) && duel.status === 'active') ? (
-              <div className="flex flex-col items-center gap-2 mt-3 flex-none">
+              <div className="flex-none flex flex-col items-center gap-2">
                 {me?.status === 'lost' && opponent?.status === 'playing' && (
-                  <p className="text-xs font-display font-bold text-[#8B6F3B] bg-[#FFF3D6] border border-[#F2C974] px-3.5 py-2 rounded-full">
+                  <p className="text-[11px] font-display font-bold text-[#8B6F3B] bg-[#FFF3D6] border border-[#F2C974] px-3 py-1.5 rounded-full">
                     Out of guesses! {opponent?.username ?? 'Your friend'} is still solving…
                   </p>
                 )}
                 {opponentIsStale(opponent) && duel.status === 'active' && (
                   <button
                     onClick={handleClaimForfeit}
-                    className="px-4 py-2 bg-[#FDECE7] hover:bg-[#FCD8CD] border border-[#FADCD5] text-[#D96B4C] font-display font-extrabold text-[11px] rounded-xl transition-colors cursor-pointer"
+                    className="px-3 py-1.5 bg-[#FDECE7] hover:bg-[#FCD8CD] border border-[#FADCD5] text-[#D96B4C] font-display font-extrabold text-[11px] rounded-xl transition-colors cursor-pointer"
                   >
                     {opponent?.left_at ? 'Opponent left — claim your win!' : 'Opponent seems away — claim your win'}
                   </button>
                 )}
               </div>
             ) : null}
-            </div>
           </div>
 
           {/* Keyboard: pinned to the bottom of the duel shell (thumb zone) */}
